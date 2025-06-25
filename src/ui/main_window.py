@@ -3072,10 +3072,10 @@ class MainWindow(QMainWindow):
                                 self.logger.info(
                                     "Motor not required - already at maximum position (324.05)")
                                 return False
-                        else:
-                            self.motor_flag = True
-                            self.logger.info(
-                                "Motor required - needs to move to maximum position (324.05)")
+                            else:
+                                self.motor_flag = True
+                                self.logger.info(
+                                    "Motor required - needs to move to maximum position (324.05)")
                     except Exception as e:
                         self.logger.error(f"Error checking motor position: {e}")
                         self.logger.info("Assuming motor not required due to error")
