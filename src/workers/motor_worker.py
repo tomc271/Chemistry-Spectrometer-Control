@@ -462,6 +462,16 @@ class MotorWorker(QThread):
                     if not success and self.timing_mode:
                         self.timing_logger.info(
                             f"MOTOR_COMMAND_FAILED - Command: set_speed, Value: {speed}")
+            elif cmd_type == 'to_ptf_halbach':
+                success = self.controller.to_ptf_halbach()
+                if not success and self.timing_mode:
+                    self.timing_logger.info(
+                        "MOTOR_COMMAND_FAILED - Command: to_ptf_halbach")
+            elif cmd_type == 'to_ptf_bore':
+                success = self.controller.to_ptf_bore()
+                if not success and self.timing_mode:
+                    self.timing_logger.info(
+                        "MOTOR_COMMAND_FAILED - Command: to_ptf_bore")
 
             # Process next command if any
             if not self._command_queue.empty():
@@ -834,6 +844,60 @@ class MotorWorker(QThread):
         except Exception as e:
             self.error_occurred.emit(f"Failed to move to top: {str(e)}")
             return False
+        
+    def to_ptf_halbach(self) -> bool:
+        """Move motor to PTF Halbach position."""
+        if not self.running:
+            self.error_occurred.emit("Motor not connected")
+            return False
+
+        try:
+            # Handle mock mode
+            if isinstance(self.controller, MockMotorController):
+                if self.controller.to_top():
+                    self.logger.info("Moving mock motor to top position")
+                    return True
+                return False
+
+            # Add command to queue for real motor
+            self._command_queue.put({
+                'type': 'to_ptf_halbach'
+            })
+
+            self.logger.info("Moving motor to PTF Halbach position")
+            self.status_changed.emit("Moving motor to PTF Halbach position")
+            return True
+
+        except Exception as e:
+            self.error_occurred.emit(f"Failed to move to PTF Halbach: {str(e)}")
+            return False
+        
+    def to_ptf_bore(self) -> bool:
+        """Move motor to PTF Bore position."""
+        if not self.running:
+            self.error_occurred.emit("Motor not connected")
+            return False
+
+        try:
+            # Handle mock mode
+            if isinstance(self.controller, MockMotorController):
+                if self.controller.to_top():
+                    self.logger.info("Moving mock motor to top position")
+                    return True
+                return False
+
+            # Add command to queue for real motor
+            self._command_queue.put({
+                'type': 'to_ptf_bore'
+            })
+
+            self.logger.info("Moving motor to PTF Bore position")
+            self.status_changed.emit("Moving motor to PTF Bore position")
+            return True
+
+        except Exception as e:
+            self.error_occurred.emit(f"Failed to move to PTF Bore: {str(e)}")
+            return False              
 
     def set_speed(self, speed: int) -> bool:
         """Set motor speed.

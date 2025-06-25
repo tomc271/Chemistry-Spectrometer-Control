@@ -2147,25 +2147,46 @@ class MainWindow(QMainWindow):
     def on_motorToBottomButton_clicked(self):
         """Handle motor to bottom button click."""
         if self.motor_worker and self.motor_worker.running:
+            self.uncheck_motor_buttons()
+            self.motorToBottomButton.setChecked(True)
             self.motor_worker.to_bottom()
 
     @pyqtSlot()
     def on_motorToTopButton_clicked(self):
         """Handle motor to top button click."""
         if self.motor_worker and self.motor_worker.running:
+            self.uncheck_motor_buttons()
+            self.motorToTopButton.setChecked(True)
             self.motor_worker.to_top()
 
     @pyqtSlot()
     def on_motorPtfBoreButton_clicked(self):
         """Handle PTF Bore button click."""
         if self.motor_worker and self.motor_worker.running:
-            self.motor_worker.step_motor('6')
+            self.uncheck_motor_buttons()
+            self.motorPtfBoreButton.setChecked(True)
+            self.motor_worker.to_ptf_bore()
 
     @pyqtSlot()
     def on_motorPtfHalbachButton_clicked(self):
         """Handle PTF Halbach button click."""
         if self.motor_worker and self.motor_worker.running:
-            self.motor_worker.step_motor('h')
+            self.uncheck_motor_buttons()
+            self.motorPtfHalbachButton.setChecked(True)
+            self.motor_worker.to_ptf_halbach()
+
+    def uncheck_motor_buttons(self):
+        """Uncheck all motor buttons."""
+        # Uncheck all other macro buttons
+        for i in range(1, 4):
+            other_button = getattr(self, f"motor_macro{i}_button")
+            other_button.setChecked(False)
+
+        # Also uncheck the PTF and top and bottom buttons
+        self.motorPtfBoreButton.setChecked(False)
+        self.motorPtfHalbachButton.setChecked(False)
+        self.motorToBottomButton.setChecked(False)
+        self.motorToTopButton.setChecked(False)
 
     @pyqtSlot(int)
     def on_motorMacroButton_clicked(self, macro_num: int):
@@ -2180,10 +2201,7 @@ class MainWindow(QMainWindow):
                 macro_button = getattr(self, f"motor_macro{macro_num}_button")
 
                 # Uncheck all other macro buttons
-                for i in range(1, 5):
-                    if i != macro_num:
-                        other_button = getattr(self, f"motor_macro{i}_button")
-                        other_button.setChecked(False)
+                self.uncheck_motor_buttons()
 
                 macro = self.load_motor_macro(macro_num)
                 if macro:
