@@ -85,12 +85,25 @@ class ArduinoController:
                 self.logger.info(f"Connected to Arduino on COM{self.port}")
                 
                 return True
+            except minimalmodbus.NoResponseError as e:
+                self.logger.warning(f"No response from Arduino during connection test: {e}")
+                return False
+            except minimalmodbus.InvalidResponseError as e:
+                self.logger.warning(f"Invalid response from Arduino during connection test: {e}")
+                return False
+            except (OSError, IOError) as e:
+                self.logger.warning(f"Serial communication error during connection test: {e}")
+                return False
             except Exception as e:
-                self.logger.error(f"Connection test failed: {e}")
+                self.logger.warning(f"Connection test failed: {e}")
                 return False
 
+        except (OSError, IOError) as e:
+            self.logger.warning(f"Failed to connect to Arduino (serial error): {e}")
+            self.running = False
+            return False
         except Exception as e:
-            self.logger.error(f"Failed to connect to Arduino: {e}")
+            self.logger.warning(f"Failed to connect to Arduino: {e}")
             self.running = False
             return False
 
@@ -146,15 +159,19 @@ class ArduinoController:
                 return None
 
         except minimalmodbus.NoResponseError as e:
-            self.logger.error(f"No response from Arduino: {e}")
+            self.logger.warning(f"No response from Arduino: {e}")
             self.running = False
             return None
         except minimalmodbus.InvalidResponseError as e:
-            self.logger.error(f"Invalid response from Arduino: {e}")
+            self.logger.warning(f"Invalid response from Arduino: {e}")
+            self.running = False
+            return None
+        except (OSError, IOError) as e:
+            self.logger.warning(f"Serial communication error: {e}")
             self.running = False
             return None
         except Exception as e:
-            self.logger.error(f"Error getting readings: {e}")
+            self.logger.warning(f"Unexpected error getting readings: {e}")
             self.running = False
             return None
 
@@ -181,8 +198,20 @@ class ArduinoController:
             self.logger.debug(f"Set valve states to: {states}")
             return True
 
+        except minimalmodbus.NoResponseError as e:
+            self.logger.warning(f"No response from Arduino when setting valves: {e}")
+            self.running = False
+            return False
+        except minimalmodbus.InvalidResponseError as e:
+            self.logger.warning(f"Invalid response from Arduino when setting valves: {e}")
+            self.running = False
+            return False
+        except (OSError, IOError) as e:
+            self.logger.warning(f"Serial communication error when setting valves: {e}")
+            self.running = False
+            return False
         except Exception as e:
-            self.logger.error(f"Error setting valves: {e}")
+            self.logger.warning(f"Unexpected error setting valves: {e}")
             self.running = False
             return False
 
@@ -192,11 +221,17 @@ class ArduinoController:
             try:
                 # Disable TTL if enabled
                 if self.mode == 2:
-                    self.arduino.write_bit(self.TTL_ADDRESS, 0)
+                    try:
+                        self.arduino.write_bit(self.TTL_ADDRESS, 0)
+                    except Exception as e:
+                        self.logger.warning(f"Error disabling TTL mode: {e}")
                 # Close serial connection
-                self.arduino.serial.close()
+                try:
+                    self.arduino.serial.close()
+                except Exception as e:
+                    self.logger.warning(f"Error closing serial connection: {e}")
             except Exception as e:
-                self.logger.error(f"Error closing Arduino connection: {e}")
+                self.logger.warning(f"Error during Arduino shutdown: {e}")
         self.running = False
 
     def reset(self) -> bool:
@@ -213,8 +248,21 @@ class ArduinoController:
             # Update tracked valve states to all closed
             self._valve_states = [0] * 8
             return True
+        except minimalmodbus.NoResponseError as e:
+            self.logger.warning(f"No response from Arduino during reset: {e}")
+            self.running = False
+            return False
+        except minimalmodbus.InvalidResponseError as e:
+            self.logger.warning(f"Invalid response from Arduino during reset: {e}")
+            self.running = False
+            return False
+        except (OSError, IOError) as e:
+            self.logger.warning(f"Serial communication error during reset: {e}")
+            self.running = False
+            return False
         except Exception as e:
-            self.logger.error(f"Error resetting system: {e}")
+            self.logger.warning(f"Unexpected error resetting system: {e}")
+            self.running = False
             return False
 
     def depressurize(self) -> bool:
@@ -232,8 +280,21 @@ class ArduinoController:
             # Update tracked valve states to all closed
             self._valve_states = [0] * 8
             return True
+        except minimalmodbus.NoResponseError as e:
+            self.logger.warning(f"No response from Arduino during depressurize: {e}")
+            self.running = False
+            return False
+        except minimalmodbus.InvalidResponseError as e:
+            self.logger.warning(f"Invalid response from Arduino during depressurize: {e}")
+            self.running = False
+            return False
+        except (OSError, IOError) as e:
+            self.logger.warning(f"Serial communication error during depressurize: {e}")
+            self.running = False
+            return False
         except Exception as e:
-            self.logger.error(f"Error depressurizing system: {e}")
+            self.logger.warning(f"Unexpected error depressurizing system: {e}")
+            self.running = False
             return False
         
     def get_valve_states(self) -> List[int]:
@@ -260,5 +321,15 @@ class ArduinoController:
             else:
                 # self.logger.info("Valve states: %s", actual_states)
                 pass
+        except minimalmodbus.NoResponseError as e:
+            self.logger.warning(f"No response from Arduino during valve state verification: {e}")
+            self.running = False
+        except minimalmodbus.InvalidResponseError as e:
+            self.logger.warning(f"Invalid response from Arduino during valve state verification: {e}")
+            self.running = False
+        except (OSError, IOError) as e:
+            self.logger.warning(f"Serial communication error during valve state verification: {e}")
+            self.running = False
         except Exception as e:
-            self.logger.error(f"Error verifying valve states: {e}")
+            self.logger.warning(f"Unexpected error verifying valve states: {e}")
+            self.running = False

@@ -163,7 +163,7 @@ class ArduinoWorker(QThread):
 
         last_valve_check = time.time()
         consecutive_errors = 0
-        MAX_CONSECUTIVE_ERRORS = 5
+        MAX_CONSECUTIVE_ERRORS = 3  # Reduced from 5 to 3
 
         while self._running:
             try:
@@ -183,40 +183,36 @@ class ArduinoWorker(QThread):
                             pass
                     else:
                         consecutive_errors += 1
-                        error_msg = "Failed to get pressure readings"
-                        self.error_occurred.emit(error_msg)
-                        self.logger.error(error_msg)
+                        error_msg = f"Failed to get pressure readings (attempt {consecutive_errors}/{MAX_CONSECUTIVE_ERRORS})"
+                        self.logger.warning(error_msg)
                         
-                        # If too many consecutive errors, attempt reconnection
+                        # If too many consecutive errors, stop the worker
                         if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
-                            self.logger.warning("Too many consecutive errors, attempting reconnection...")
-                            self.controller.stop()
-                            if self.controller.start():
-                                consecutive_errors = 0
-                                self.logger.info("Successfully reconnected to Arduino")
-                            else:
-                                self.error_occurred.emit("Failed to reconnect to Arduino")
-                                self.logger.error("Failed to reconnect to Arduino")
-                                break
+                            self.logger.error(f"Arduino disconnected after {MAX_CONSECUTIVE_ERRORS} consecutive failures")
+                            self.error_occurred.emit("Arduino disconnected")
+                            break
 
                     # Periodically verify valve states (every 1 second)
                     now = time.time()
                     if now - last_valve_check > 1.0:
                         if hasattr(self.controller, 'verify_valve_states'):
-                            self.controller.verify_valve_states()
+                            try:
+                                self.controller.verify_valve_states()
+                            except Exception as e:
+                                self.logger.warning(f"Valve state verification failed: {e}")
                         last_valve_check = now
 
                 # Sleep for update interval
                 time.sleep(self.update_interval)
 
             except Exception as e:
-                self.logger.error(f"Unexpected error in Arduino worker: {str(e)}", exc_info=True)
-                self.error_occurred.emit(f"Unexpected error: {str(e)}")
                 consecutive_errors += 1
+                self.logger.error(f"Unexpected error in Arduino worker (attempt {consecutive_errors}/{MAX_CONSECUTIVE_ERRORS}): {str(e)}")
                 
                 # If too many consecutive errors, stop the worker
                 if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
-                    self.logger.error("Too many consecutive errors, stopping worker")
+                    self.logger.error(f"Arduino worker stopping after {MAX_CONSECUTIVE_ERRORS} consecutive errors")
+                    self.error_occurred.emit("Arduino disconnected")
                     break
 
         self.controller.stop()

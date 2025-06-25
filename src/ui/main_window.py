@@ -1890,8 +1890,8 @@ class MainWindow(QMainWindow):
                 except Exception as e:
                     self.logger.error(f"Error disconnecting Arduino: {str(e)}")
                     self.cleanup_arduino_worker()
-                    QMessageBox.critical(
-                        self, "Arduino Disconnect Error", str(e))
+                    # QMessageBox.critical(
+                    #     self, "Arduino Disconnect Error", str(e))
                     return
 
             # Create new Arduino worker when connecting
@@ -1928,7 +1928,6 @@ class MainWindow(QMainWindow):
                 self.logger.error(
                     f"Exception during Arduino connect: {str(e)}")
                 self.cleanup_arduino_worker()
-                QMessageBox.critical(self, "Arduino Connect Error", str(e))
                 self.handle_error(f"Failed to connect to Arduino: {str(e)}")
                 self.arduino_connect_btn.setText("Connect")
                 if not self.test_mode:
@@ -1939,7 +1938,6 @@ class MainWindow(QMainWindow):
             self.logger.error(
                 f"Uncaught exception in Arduino connection: {str(e)}")
             self.cleanup_arduino_worker()
-            QMessageBox.critical(self, "Arduino Connection Error", str(e))
             self.handle_error(
                 "An unexpected error occurred while connecting to Arduino")
             self.arduino_connect_btn.setText("Connect")
@@ -1996,19 +1994,54 @@ class MainWindow(QMainWindow):
     @pyqtSlot(str)
     def on_arduino_error_occurred(self, message: str):
         """Handle error messages from ArduinoWorker."""
-        self.arduino_connect_btn.setText("Connect")
-        if not self.test_mode:
-            self.arduino_warning_label.setText("Warning: Arduino not connected")
-            self.arduino_warning_label.setVisible(True)
-        self.dev_checkbox.setEnabled(False)
-        self.dev_checkbox.setChecked(False)
-        self.disable_valve_controls(True)
-        self.set_valve_mode(False)
-        self.arduino_auto_connect_radio.setEnabled(True)
-        self.arduino_ttl_radio.setEnabled(True)
-        self.arduino_manual_radio.setEnabled(True)
-        self.logger.error(f"Arduino error: {message}")
-        QMessageBox.critical(self, "Arduino Error", message)
+        # Check if this is a disconnection error
+        if "Arduino disconnected" in message or "Failed to connect" in message:
+            self.logger.info(f"Arduino disconnection detected: {message}")
+            
+            # Clean up Arduino worker similar to disconnect button press
+            try:
+                self.cleanup_file_timer()
+                # Stop sequence file check timer if present
+                if hasattr(self, 'file_timer') and self.file_timer:
+                    self.file_timer.stop()
+                    self.file_timer.deleteLater()
+                    delattr(self, 'file_timer')
+                if hasattr(self, 'file_check_timer') and self.file_check_timer:
+                    self.file_check_timer.stop()
+                    self.file_check_timer.deleteLater()
+                    delattr(self, 'file_check_timer')
+                if hasattr(self, 'connection_check_timer'):
+                    self.connection_check_timer.stop()
+                    self.connection_check_timer.deleteLater()
+                    delattr(self, 'connection_check_timer')
+                if self.saving:
+                    self.logger.info(
+                        "Stopping data recording due to Arduino disconnection")
+                    self.plot_widget.stop_recording()
+                    self.beginSaveButton.setText("Begin Saving")
+                    self.beginSaveButton.setChecked(False)
+                    self.saving = False
+                self.uncheck_all_valve_controls()
+                self.cleanup_arduino_worker()
+                self.arduino_connect_btn.setText("Connect")
+                if not self.test_mode:
+                    self.arduino_warning_label.setText(
+                        "Warning: Arduino not connected")
+                    self.arduino_warning_label.setVisible(True)
+                self.dev_checkbox.setEnabled(False)
+                self.dev_checkbox.setChecked(False)
+                self.disable_valve_controls(True)
+                self.set_valve_mode(False)
+                self.logger.info("Arduino disconnected and cleaned up")
+                self.update_device_status()
+                self.arduino_auto_connect_radio.setEnabled(True)
+                self.arduino_ttl_radio.setEnabled(True)
+                self.arduino_manual_radio.setEnabled(True)
+            except Exception as e:
+                self.logger.error(f"Error during Arduino cleanup: {e}")
+        else:
+            # For other errors, just log them
+            self.logger.error(f"Arduino error: {message}")
 
     def _check_connection_and_update(self):
         """Check if Arduino is connected and update device status if it is."""
@@ -2807,9 +2840,10 @@ class MainWindow(QMainWindow):
         if any(term in message.lower() for term in ["connect", "connection", "disconnected", "calibration"]):
             self.update_device_status()
 
-        # Only show message box for critical errors, not connection issues
-        if not any(err in message.lower() for err in ["position", "failed to get", "connection"]):
-            QMessageBox.critical(self, "Error", message)
+        # Only show message box for critical errors, not connection issues or Arduino errors
+        if not any(err in message.lower() for err in ["position", "failed to get", "connection", "arduino", "disconnected", "failed to connect"]):
+            # QMessageBox.critical(self, "Error", message)
+            pass
         # Log all errors
         self.logger.error(message)
 
@@ -3239,7 +3273,7 @@ class MainWindow(QMainWindow):
         # When the 15-minute timer elapses, stop recording
         if self.plot_widget and self.plot_widget.recording:
             self.plot_widget.stop_recording()
-            self.log_widget.log_info(
+            self.logger.info(
                 "Recording stopped: 15-minute sequence timer elapsed")
 
     def cleanup_arduino_worker(self):
@@ -3350,7 +3384,7 @@ class MainWindow(QMainWindow):
         # When the 15-minute timer elapses, stop recording
         if self.plot_widget and self.plot_widget.recording:
             self.plot_widget.stop_recording()
-            self.log_widget.log_info(
+            self.logger.info(
                 "Recording stopped: 15-minute sequence timer elapsed")
 
     def uncheck_all_valve_controls(self):
