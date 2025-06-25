@@ -1238,10 +1238,7 @@ class MainWindow(QMainWindow):
                 # Properly stop the worker thread
                 self.motor_worker.cleanup()
 
-                # Wait for thread to finish (with timeout)
-                if not self.motor_worker.wait(1000):  # 1 second timeout
-                    self.logger.warning("Motor worker thread did not terminate gracefully, forcing termination")
-                    self.motor_worker.terminate()
+                self.motor_worker.terminate()
 
                 self.motor_worker = None
                 self.logger.info("Motor worker cleaned up successfully")
