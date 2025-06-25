@@ -2148,7 +2148,7 @@ class MainWindow(QMainWindow):
         """Handle motor to bottom button click."""
         if self.motor_worker and self.motor_worker.running:
             self.uncheck_motor_buttons()
-            self.motorToBottomButton.setChecked(True)
+            self.motor_to_bottom_button.setChecked(True)
             self.motor_worker.to_bottom()
 
     @pyqtSlot()
@@ -2156,7 +2156,7 @@ class MainWindow(QMainWindow):
         """Handle motor to top button click."""
         if self.motor_worker and self.motor_worker.running:
             self.uncheck_motor_buttons()
-            self.motorToTopButton.setChecked(True)
+            self.motor_to_top_button.setChecked(True)
             self.motor_worker.to_top()
 
     @pyqtSlot()
@@ -2164,7 +2164,7 @@ class MainWindow(QMainWindow):
         """Handle PTF Bore button click."""
         if self.motor_worker and self.motor_worker.running:
             self.uncheck_motor_buttons()
-            self.motorPtfBoreButton.setChecked(True)
+            self.motor_ptf_bore_button.setChecked(True)
             self.motor_worker.to_ptf_bore()
 
     @pyqtSlot()
@@ -2172,7 +2172,7 @@ class MainWindow(QMainWindow):
         """Handle PTF Halbach button click."""
         if self.motor_worker and self.motor_worker.running:
             self.uncheck_motor_buttons()
-            self.motorPtfHalbachButton.setChecked(True)
+            self.motor_ptf_halbach_button.setChecked(True)
             self.motor_worker.to_ptf_halbach()
 
     def uncheck_motor_buttons(self):
@@ -2183,10 +2183,10 @@ class MainWindow(QMainWindow):
             other_button.setChecked(False)
 
         # Also uncheck the PTF and top and bottom buttons
-        self.motorPtfBoreButton.setChecked(False)
-        self.motorPtfHalbachButton.setChecked(False)
-        self.motorToBottomButton.setChecked(False)
-        self.motorToTopButton.setChecked(False)
+        self.motor_ptf_bore_button.setChecked(False)
+        self.motor_ptf_halbach_button.setChecked(False)
+        self.motor_to_bottom_button.setChecked(False)
+        self.motor_to_top_button.setChecked(False)
 
     @pyqtSlot(int)
     def on_motorMacroButton_clicked(self, macro_num: int):
