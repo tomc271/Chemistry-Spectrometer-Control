@@ -463,12 +463,12 @@ class MotorWorker(QThread):
                         self.timing_logger.info(
                             f"MOTOR_COMMAND_FAILED - Command: set_speed, Value: {speed}")
             elif cmd_type == 'to_ptf_halbach':
-                success = self.controller.to_ptf_halbach()
+                success = self.controller.move_to_position(265.50)
                 if not success and self.timing_mode:
                     self.timing_logger.info(
                         "MOTOR_COMMAND_FAILED - Command: to_ptf_halbach")
             elif cmd_type == 'to_ptf_bore':
-                success = self.controller.to_ptf_bore()
+                success = self.controller.move_to_position(91.08)
                 if not success and self.timing_mode:
                     self.timing_logger.info(
                         "MOTOR_COMMAND_FAILED - Command: to_ptf_bore")

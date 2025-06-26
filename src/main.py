@@ -9,6 +9,7 @@ from utils.config import Config
 from ui.main_window import MainWindow
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QIcon
 import argparse
 from pathlib import Path
 import logging
@@ -38,6 +39,33 @@ def setup_exception_handling(app):
     sys.excepthook = handle_exception
 
 
+def setup_application_icon(app):
+    """Setup application icon."""
+    try:
+        # Try to find the icon file in various locations
+        icon_paths = [
+            "chem.ico",  # Current directory
+            "dist/SSBubble/chem.ico",  # Distribution folder
+            "dist/SSBubble/data/chem.ico",  # Data subfolder
+            "SSBubble/data/chem.ico",  # Current directory/SSBubble/data
+            str(Path(__file__).parent.parent / "chem.ico"),  # Project root
+        ]
+        
+        icon_set = False
+        for icon_path in icon_paths:
+            if Path(icon_path).exists():
+                app.setWindowIcon(QIcon(icon_path))
+                logging.info(f"Application icon set from: {icon_path}")
+                icon_set = True
+                break
+        
+        if not icon_set:
+            logging.warning("Could not find chem.ico file for application icon")
+            
+    except Exception as e:
+        logging.error(f"Error setting application icon: {e}")
+
+
 def main():
     """Main entry point for the application."""
     try:
@@ -65,6 +93,9 @@ def main():
 
         # Create application
         app = QApplication(sys.argv)
+        
+        # Set application icon
+        setup_application_icon(app)
 
         # Create main window with args
         window = MainWindow(

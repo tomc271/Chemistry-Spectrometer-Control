@@ -880,6 +880,7 @@ class MainWindow(QMainWindow):
         # Create the motor macro buttons
         self.motor_to_top_button = QPushButton("To Top")
         self.motor_to_top_button.setMinimumSize(QSize(0, 35))
+        self.motor_to_top_button.setCheckable(True)
         font = QFont()
         font.setPointSize(10)
         self.motor_to_top_button.setFont(font)
@@ -888,6 +889,7 @@ class MainWindow(QMainWindow):
         # Replace ascent button with to bottom button
         self.motor_to_bottom_button = QPushButton("To Bottom")
         self.motor_to_bottom_button.setMinimumSize(QSize(0, 35))
+        self.motor_to_bottom_button.setCheckable(True)
         font = QFont()
         font.setPointSize(10)
         self.motor_to_bottom_button.setFont(font)
@@ -896,6 +898,7 @@ class MainWindow(QMainWindow):
         # Add PTF Bore button
         self.motor_ptf_bore_button = QPushButton("PTF Bore")
         self.motor_ptf_bore_button.setMinimumSize(QSize(0, 35))
+        self.motor_ptf_bore_button.setCheckable(True)
         font = QFont()
         font.setPointSize(10)
         self.motor_ptf_bore_button.setFont(font)
@@ -904,6 +907,7 @@ class MainWindow(QMainWindow):
         # Add PTF Halbach button
         self.motor_ptf_halbach_button = QPushButton("PTF Halbach")
         self.motor_ptf_halbach_button.setMinimumSize(QSize(0, 35))
+        self.motor_ptf_halbach_button.setCheckable(True)
         font = QFont()
         font.setPointSize(10)
         self.motor_ptf_halbach_button.setFont(font)

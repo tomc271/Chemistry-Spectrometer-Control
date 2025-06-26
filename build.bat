@@ -16,6 +16,8 @@ if not exist chem.ico (
     exit /b 1
 )
 
+echo Icon file found: chem.ico
+
 REM Create and activate virtual environment
 echo Creating build virtual environment...
 if exist venv rmdir /s /q venv
@@ -54,7 +56,7 @@ echo Creating necessary directories...
 mkdir dist\SSBubble\config 2>nul
 mkdir dist\SSBubble\data 2>nul
 
-echo Building SSBubble...
+echo Building SSBubble with icon...
 pyinstaller --clean SSBubble.spec --log-level DEBUG
 
 set BUILD_STATUS=%errorlevel%
@@ -84,7 +86,15 @@ if exist motor_macro_data.json (
     )
 )
 
-if not exist dist\SSBubble\SSBubble.exe (
+REM Ensure icon is copied to distribution folder
+echo Copying icon to distribution folder...
+copy chem.ico dist\SSBubble\data\ 2>nul
+
+REM Check what was created
+echo Checking build output...
+dir dist\SSBubble
+
+if not exist dist\SSBubble.exe (
     echo Error: Executable was not created!
     echo Checking for common issues...
     
@@ -96,11 +106,6 @@ if not exist dist\SSBubble\SSBubble.exe (
     pause
     exit /b 1
 )
-
-echo Build successful! Testing executable...
-cd dist\SSBubble
-SSBubble.exe
-cd ..\..
 
 echo Build process complete.
 echo You can remove the venv directory if you don't need it anymore.

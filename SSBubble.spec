@@ -83,7 +83,7 @@ datas = [
     ('src/utils/*.py', 'src/utils/'),
     ('src/workers/*.py', 'src/workers/'),
     ('src/__init__.py', 'src/'),
-    ('chem.ico', '.'),
+    ('chem.ico', '.'),  # Copy icon to root of distribution
 ]
 
 # Add matplotlib data files
@@ -126,10 +126,10 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=True,  # Keep True for debugging
+    console=False,  # Changed to False to properly display icon
     disable_windowed_traceback=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='chem.ico'
+    icon=os.path.abspath('chem.ico')  # Use absolute path for icon
 ) 
