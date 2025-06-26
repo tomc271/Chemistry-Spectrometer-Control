@@ -49,7 +49,7 @@ class PlotWidget(QWidget):
         # Initialize data
         self.times = np.array([])
         self.pressures = [np.array([]) for _ in range(4)]
-        self.labels = ['Rig', 'Inlet', 'Outlet', 'Tube']
+        self.labels = ['Rig', 'Tube', 'Inlet', 'Outlet']
         self.lines = [self.ax.plot([], [], label=f'{self.labels[i]}')[0]
                       for i in range(4)]
 
@@ -148,10 +148,13 @@ class PlotWidget(QWidget):
         self.ax.set_xlim(current_time - 30, current_time)
 
         # Update line data
+        # Line order: P1, P3, P2, P4
+        line_order = [0, 2, 1, 3]  # Map new order to original pressure indices
         for i, line in enumerate(self.lines):
-            line.set_data(self.times, self.pressures[i])
+            pressure_idx = line_order[i]  # Get corresponding pressure index
+            line.set_data(self.times, self.pressures[pressure_idx])
             # Apply visibility setting
-            line.set_visible(self.sensor_visibility[i])
+            line.set_visible(self.sensor_visibility[pressure_idx])
 
         # Force a redraw
         self.canvas.draw()
@@ -203,7 +206,7 @@ class PlotWidget(QWidget):
                     writer = csv.writer(f)
                     # Write header
                     writer.writerow(
-                        ['Time', 'Sensor1', 'Sensor2', 'Sensor3', 'Sensor4'])
+                        ['Time', 'Rig', 'Inlet', 'Tube', 'Outlet'])
 
                     # Write data rows
                     for i in range(len(self.times)):
@@ -252,7 +255,7 @@ class PlotWidget(QWidget):
             self.csv_writer = csv.writer(self.save_file)
 
             # Write header
-            header = ['Time', 'Rig', 'Inlet', 'Outlet', 'Tube']
+            header = ['Time', 'Rig', 'Inlet', 'Tube', 'Outlet']
             self.logger.debug(f"Writing CSV header: {header}")
             self.csv_writer.writerow(header)
 

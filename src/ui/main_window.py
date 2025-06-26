@@ -663,12 +663,12 @@ class MainWindow(QMainWindow):
         monitor_layout = QGridLayout(monitor_group)
         monitor_layout.setContentsMargins(0, 0, 0, 0)
 
-        enum_pressure_sensors = ["Rig", "Inlet", "Outlet", "Tube"]
+        enum_pressure_sensors = ["Rig", "Inlet", "Tube", "Outlet"]
         sensor_colors = {
             "Rig": "blue",
-            "Inlet": "orange",
-            "Outlet": "green",
-            "Tube": "red"
+            "Inlet": "green",
+            "Outlet": "red",
+            "Tube": "orange"
         }
         # Create pressure radio buttons
         for i in range(1, 5):
