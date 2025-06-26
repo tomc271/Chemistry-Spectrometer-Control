@@ -1400,7 +1400,7 @@ class MainWindow(QMainWindow):
         """Write status back to Prospa."""
         try:
             with open(r"C:\ssbubble\prospa.txt", "w") as f:
-                f.write("1" if success else "0")
+                f.write("1" if success else "2")
         except Exception as e:
             self.logger.error(f"Failed to write to Prospa: {e}")
 
