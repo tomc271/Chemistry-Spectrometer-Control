@@ -3358,7 +3358,7 @@ class MainWindow(QMainWindow):
         try:
             # Write status to Prospa
             with open(prospa_path, 'w') as f:
-                f.write('1' if success else '0')
+                f.write('1' if success else '2')
 
             # Delete sequence file only if not in test mode
             if success and not self.keep_sequence:
