@@ -2153,7 +2153,36 @@ class MainWindow(QMainWindow):
         if self.motor_worker and self.motor_worker.running:
             self.uncheck_motor_buttons()
             self.motor_to_bottom_button.setChecked(True)
-            self.motor_worker.to_bottom()
+            success = self.motor_worker.to_bottom()
+            
+            if success:
+                # Stop any existing timer for this button
+                if hasattr(self, 'to_bottom_timer') and self.to_bottom_timer is not None:
+                    self.to_bottom_timer.stop()
+                    self.to_bottom_timer = None
+
+                # Create a timer to check position periodically
+                self.to_bottom_timer = QTimer(self)
+                self.to_bottom_timer.setInterval(100)  # Check every 100ms
+
+                def check_position():
+                    if not self.motor_worker:  # Check if motor worker exists
+                        if self.to_bottom_timer:
+                            self.to_bottom_timer.stop()
+                            self.to_bottom_timer = None
+                        self.motor_to_bottom_button.setChecked(False)
+                        return
+
+                    current_pos = self.motor_worker.get_current_position()
+                    if current_pos is not None and abs(current_pos - 0.0) < 0.1:  # Target position is 0.0 (bottom)
+                        self.motor_to_bottom_button.setChecked(False)
+                        self.to_bottom_timer.stop()
+                        self.to_bottom_timer = None
+
+                self.to_bottom_timer.timeout.connect(check_position)
+                self.to_bottom_timer.start()
+            else:
+                self.motor_to_bottom_button.setChecked(False)
 
     @pyqtSlot()
     def on_motorToTopButton_clicked(self):
@@ -2161,7 +2190,36 @@ class MainWindow(QMainWindow):
         if self.motor_worker and self.motor_worker.running:
             self.uncheck_motor_buttons()
             self.motor_to_top_button.setChecked(True)
-            self.motor_worker.to_top()
+            success = self.motor_worker.to_top()
+            
+            if success:
+                # Stop any existing timer for this button
+                if hasattr(self, 'to_top_timer') and self.to_top_timer is not None:
+                    self.to_top_timer.stop()
+                    self.to_top_timer = None
+
+                # Create a timer to check position periodically
+                self.to_top_timer = QTimer(self)
+                self.to_top_timer.setInterval(100)  # Check every 100ms
+
+                def check_position():
+                    if not self.motor_worker:  # Check if motor worker exists
+                        if self.to_top_timer:
+                            self.to_top_timer.stop()
+                            self.to_top_timer = None
+                        self.motor_to_top_button.setChecked(False)
+                        return
+
+                    current_pos = self.motor_worker.get_current_position()
+                    if current_pos is not None and abs(current_pos - 324.05) < 0.1:  # Target position is 324.05 (top)
+                        self.motor_to_top_button.setChecked(False)
+                        self.to_top_timer.stop()
+                        self.to_top_timer = None
+
+                self.to_top_timer.timeout.connect(check_position)
+                self.to_top_timer.start()
+            else:
+                self.motor_to_top_button.setChecked(False)
 
     @pyqtSlot()
     def on_motorPtfBoreButton_clicked(self):
@@ -2169,7 +2227,36 @@ class MainWindow(QMainWindow):
         if self.motor_worker and self.motor_worker.running:
             self.uncheck_motor_buttons()
             self.motor_ptf_bore_button.setChecked(True)
-            self.motor_worker.to_ptf_bore()
+            success = self.motor_worker.to_ptf_bore()
+            
+            if success:
+                # Stop any existing timer for this button
+                if hasattr(self, 'ptf_bore_timer') and self.ptf_bore_timer is not None:
+                    self.ptf_bore_timer.stop()
+                    self.ptf_bore_timer = None
+
+                # Create a timer to check position periodically
+                self.ptf_bore_timer = QTimer(self)
+                self.ptf_bore_timer.setInterval(100)  # Check every 100ms
+
+                def check_position():
+                    if not self.motor_worker:  # Check if motor worker exists
+                        if self.ptf_bore_timer:
+                            self.ptf_bore_timer.stop()
+                            self.ptf_bore_timer = None
+                        self.motor_ptf_bore_button.setChecked(False)
+                        return
+
+                    current_pos = self.motor_worker.get_current_position()
+                    if current_pos is not None and abs(current_pos - 91.08) < 0.1:  # Target position is 91.08
+                        self.motor_ptf_bore_button.setChecked(False)
+                        self.ptf_bore_timer.stop()
+                        self.ptf_bore_timer = None
+
+                self.ptf_bore_timer.timeout.connect(check_position)
+                self.ptf_bore_timer.start()
+            else:
+                self.motor_ptf_bore_button.setChecked(False)
 
     @pyqtSlot()
     def on_motorPtfHalbachButton_clicked(self):
@@ -2177,7 +2264,36 @@ class MainWindow(QMainWindow):
         if self.motor_worker and self.motor_worker.running:
             self.uncheck_motor_buttons()
             self.motor_ptf_halbach_button.setChecked(True)
-            self.motor_worker.to_ptf_halbach()
+            success = self.motor_worker.to_ptf_halbach()
+            
+            if success:
+                # Stop any existing timer for this button
+                if hasattr(self, 'ptf_halbach_timer') and self.ptf_halbach_timer is not None:
+                    self.ptf_halbach_timer.stop()
+                    self.ptf_halbach_timer = None
+
+                # Create a timer to check position periodically
+                self.ptf_halbach_timer = QTimer(self)
+                self.ptf_halbach_timer.setInterval(100)  # Check every 100ms
+
+                def check_position():
+                    if not self.motor_worker:  # Check if motor worker exists
+                        if self.ptf_halbach_timer:
+                            self.ptf_halbach_timer.stop()
+                            self.ptf_halbach_timer = None
+                        self.motor_ptf_halbach_button.setChecked(False)
+                        return
+
+                    current_pos = self.motor_worker.get_current_position()
+                    if current_pos is not None and abs(current_pos - 265.50) < 0.1:  # Target position is 265.50
+                        self.motor_ptf_halbach_button.setChecked(False)
+                        self.ptf_halbach_timer.stop()
+                        self.ptf_halbach_timer = None
+
+                self.ptf_halbach_timer.timeout.connect(check_position)
+                self.ptf_halbach_timer.start()
+            else:
+                self.motor_ptf_halbach_button.setChecked(False)
 
     def uncheck_motor_buttons(self):
         """Uncheck all motor buttons."""
@@ -3503,7 +3619,36 @@ class MainWindow(QMainWindow):
     def _handle_position_reached(self, position):
         """Handle motor position reached signal."""
         self.logger.info(f"Motor reached position: {position}mm")
-        # Any additional handling when position is reached
+        
+        # Uncheck buttons based on target position reached
+        if abs(position - 0.0) < 0.1:  # Bottom position
+            if hasattr(self, 'motor_to_bottom_button'):
+                self.motor_to_bottom_button.setChecked(False)
+            # Clean up timer
+            if hasattr(self, 'to_bottom_timer') and self.to_bottom_timer is not None:
+                self.to_bottom_timer.stop()
+                self.to_bottom_timer = None
+        elif abs(position - 324.05) < 0.1:  # Top position
+            if hasattr(self, 'motor_to_top_button'):
+                self.motor_to_top_button.setChecked(False)
+            # Clean up timer
+            if hasattr(self, 'to_top_timer') and self.to_top_timer is not None:
+                self.to_top_timer.stop()
+                self.to_top_timer = None
+        elif abs(position - 91.08) < 0.1:  # PTF Bore position
+            if hasattr(self, 'motor_ptf_bore_button'):
+                self.motor_ptf_bore_button.setChecked(False)
+            # Clean up timer
+            if hasattr(self, 'ptf_bore_timer') and self.ptf_bore_timer is not None:
+                self.ptf_bore_timer.stop()
+                self.ptf_bore_timer = None
+        elif abs(position - 265.50) < 0.1:  # PTF Halbach position
+            if hasattr(self, 'motor_ptf_halbach_button'):
+                self.motor_ptf_halbach_button.setChecked(False)
+            # Clean up timer
+            if hasattr(self, 'ptf_halbach_timer') and self.ptf_halbach_timer is not None:
+                self.ptf_halbach_timer.stop()
+                self.ptf_halbach_timer = None
 
     def cleanup_motor_timers(self):
         """Clean up all motor-related timers."""
@@ -3522,6 +3667,23 @@ class MainWindow(QMainWindow):
             self.bubble_countdown_timer.deleteLater()
             delattr(self, 'bubble_countdown_timer')
             self.logger.info("Bubble countdown timer cleaned up")
+
+        # Clean up button-specific timers
+        button_timers = [
+            'to_top_timer',
+            'to_bottom_timer', 
+            'ptf_bore_timer',
+            'ptf_halbach_timer',
+            'position_check_timer'  # Keep the original macro timer
+        ]
+        
+        for timer_name in button_timers:
+            if hasattr(self, timer_name) and getattr(self, timer_name) is not None:
+                timer = getattr(self, timer_name)
+                timer.stop()
+                timer.deleteLater()
+                setattr(self, timer_name, None)
+                self.logger.info(f"{timer_name} cleaned up")
 
         # Cancel any pending single-shot timers related to motor operations
         # Use QCoreApplication instead of QApplication for better compatibility

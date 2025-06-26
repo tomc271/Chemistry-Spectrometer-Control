@@ -115,7 +115,7 @@ class MockMotorController:
             f"Mock motor sequence mode {'enabled' if enabled else 'disabled'}")
 
     def to_top(self) -> bool:
-        """Move motor to top position (POSITION_MAX)."""
+        """Move motor to top position."""
         try:
             self._position = self.POSITION_MAX
             self.logger.info("Mock motor moving to top position")
@@ -825,6 +825,9 @@ class MotorWorker(QThread):
             return False
 
         try:
+            # Set target position for position_reached signal
+            self._target_position = 324.05  # Top position
+            
             # Handle mock mode
             if isinstance(self.controller, MockMotorController):
                 if self.controller.to_top():
@@ -852,6 +855,9 @@ class MotorWorker(QThread):
             return False
 
         try:
+            # Set target position for position_reached signal
+            self._target_position = 265.50  # PTF Halbach position
+            
             # Handle mock mode
             if isinstance(self.controller, MockMotorController):
                 if self.controller.to_top():
@@ -879,6 +885,9 @@ class MotorWorker(QThread):
             return False
 
         try:
+            # Set target position for position_reached signal
+            self._target_position = 91.08  # PTF Bore position
+            
             # Handle mock mode
             if isinstance(self.controller, MockMotorController):
                 if self.controller.to_top():
@@ -897,7 +906,7 @@ class MotorWorker(QThread):
 
         except Exception as e:
             self.error_occurred.emit(f"Failed to move to PTF Bore: {str(e)}")
-            return False              
+            return False
 
     def set_speed(self, speed: int) -> bool:
         """Set motor speed.
@@ -1080,6 +1089,9 @@ class MotorWorker(QThread):
             return False
 
         try:
+            # Set target position for position_reached signal
+            self._target_position = 0.0  # Bottom position
+            
             # Handle mock mode
             if isinstance(self.controller, MockMotorController):
                 success = self.controller.set_position(
