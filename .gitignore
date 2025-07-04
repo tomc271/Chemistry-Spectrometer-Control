@@ -1,0 +1,146 @@
+# Build directories
+build/
+dist/
+hooks/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# PyInstaller specific
+*.spec
+*.exe
+*.zip
+*.tar.gz
+
+# Distribution / packaging
+.Python
+*.egg-info/
+*.egg
+MANIFEST
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+temp_mpl.py
+
+# Data files (if they contain sensitive or large data)
+*.csv
+*.json
+*.yaml
+*.yml
+!config/*.json
+!config/*.yaml
+!config/*.yml
+
+# Images (if they are generated)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.ico
+!chem.ico
+
+# Arduino files
+*.ino
+
+# Documentation build
+docs/_build/
+
+# Backup files
+*.bak
+*.backup
+*_old.*
+
+# PyInstaller hooks (generated during build)
+hooks/matplotlib-data-files/
+hooks/__pycache__/
+
+# Build scripts (optional - uncomment if you don't want to track them)
+# build*.bat
+# collect_packages.py 
