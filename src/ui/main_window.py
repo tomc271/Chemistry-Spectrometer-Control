@@ -1277,8 +1277,22 @@ class MainWindow(QMainWindow):
             self.handle_error("Failed to start sequence file monitoring")
 
     def check_sequence_file(self):
-        """Check for and process sequence file."""
+        """Check for and process sequence file and cleanup file."""
         try:
+            # Check for cleanup file first
+            cleanup_path = Path(r"C:\ssbubble\cleanup.txt")
+            if cleanup_path.exists():
+                try:
+                    # Delete the cleanup file
+                    cleanup_path.unlink()
+                    self.logger.info("Cleanup file found and deleted")
+                    
+                    # Execute cleanup procedure
+                    self.execute_cleanup()
+                except Exception as e:
+                    self.logger.error(f"Error processing cleanup file: {e}")
+            
+            # Check for sequence file
             sequence_path = Path(r"C:\ssbubble\sequence.txt")
             if sequence_path.exists():
                 # Process in chunks to avoid blocking
@@ -1339,7 +1353,7 @@ class MainWindow(QMainWindow):
                 QTimer.singleShot(0, process_sequence)
 
             else:
-                if self.attempt % 10 == 0:
+                if self.attempt % 100 == 0:
                     self.attempt = 0
                     self.logger.info("Sequence file not found")
                 self.attempt += 1
@@ -1347,6 +1361,54 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.logger.error(f"Error in sequence file check: {e}")
             self.handle_error(f"Sequence file check failed: {str(e)}")
+
+    def execute_cleanup(self):
+        """Execute cleanup procedure when cleanup.txt file is detected."""
+        try:
+            self.logger.info("Starting cleanup procedure")
+            
+            # Stop any running sequence
+            if hasattr(self, 'step_timer') and self.step_timer:
+                self.step_timer.stop()
+                self.logger.info("Stopped running sequence")
+            
+            # Reset valves to default state
+            if self.arduino_worker and self.arduino_worker.running:
+                self.reset_valves()
+                self.logger.info("Reset valves to default state")
+            
+            # Stop data recording if active
+            if self.saving:
+                self.plot_widget.stop_recording()
+                self.beginSaveButton.setText("Begin Saving")
+                self.beginSaveButton.setChecked(False)
+                self.saving = False
+                self.logger.info("Stopped data recording")
+            
+            # Uncheck all valve controls
+            self.uncheck_all_valve_controls()
+            
+            # Uncheck all motor buttons
+            self.uncheck_motor_buttons()
+            
+            # Reset sequence state
+            self.steps = []
+            self.motor_flag = False
+            
+            # Update sequence status
+            self.update_sequence_status("Finished")
+            self.update_sequence_info("--", 0, 0, 0)
+            
+            # Disable sequence mode on motor if connected
+            if self.motor_worker and self.motor_worker.running:
+                self.motor_worker.set_sequence_mode(False)
+                self.logger.info("Disabled motor sequence mode")
+            
+            self.logger.info("Cleanup procedure completed successfully")
+            
+        except Exception as e:
+            self.logger.error(f"Error during cleanup procedure: {e}")
+            self.handle_error(f"Cleanup procedure failed: {str(e)}")
 
     def write_sequence_finish_time(self, sequence_time: float):
         """Write sequence finish time to file.
