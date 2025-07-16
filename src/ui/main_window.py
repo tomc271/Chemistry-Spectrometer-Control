@@ -2749,6 +2749,26 @@ class MainWindow(QMainWindow):
                             f"Sequence delayed to start at {self.sequence_start_delay}")
                         return
 
+                # Check if motor speed was changed during sequence loading
+                motor_speed_delay = 0
+                if hasattr(self, '_motor_speed_changed_during_sequence') and self._motor_speed_changed_during_sequence:
+                    # Add a delay to allow Arduino to process the speed change
+                    # This delay can be adjusted based on Arduino response time
+                    motor_speed_delay = 500  # 500ms delay
+                    self.logger.info(f"Motor speed changed during sequence loading - adding {motor_speed_delay}ms delay")
+                    self.update_sequence_status(f"Waiting for motor speed to update ({motor_speed_delay}ms)...")
+                    
+                    # Store the delay time for logging purposes
+                    self._motor_speed_delay_applied = motor_speed_delay
+                    
+                    # Clear the flag
+                    self._motor_speed_changed_during_sequence = False
+
+                if motor_speed_delay > 0:
+                    # Schedule the sequence start with the motor speed delay
+                    QTimer.singleShot(motor_speed_delay, self._start_sequence_execution)
+                    return
+
                 # No delay needed, start immediately
                 self._start_sequence_execution()
 
@@ -2759,6 +2779,11 @@ class MainWindow(QMainWindow):
     def _start_sequence_execution(self):
         """Internal method to execute sequence after any delay."""
         try:
+            # Log if motor speed delay was applied
+            if hasattr(self, '_motor_speed_delay_applied'):
+                self.logger.info(f"Sequence starting after {self._motor_speed_delay_applied}ms motor speed delay")
+                delattr(self, '_motor_speed_delay_applied')  # Clean up
+
             # Clear plot before starting new sequence
             # self.plot_widget.clear_plot()
 
@@ -3312,6 +3337,10 @@ class MainWindow(QMainWindow):
                     speed_text = global_motor_speed.title()
                     self.motor_speed_combo.setCurrentText(speed_text)
                     # This will trigger the on_motor_speed_changed slot
+                    
+                    # Add a flag to indicate that motor speed was changed during sequence loading
+                    # This will be used to add a delay before sequence execution
+                    self._motor_speed_changed_during_sequence = True
                 else:
                     self.logger.warning(
                         f"Invalid motor speed: {global_motor_speed}. Using current speed.")
