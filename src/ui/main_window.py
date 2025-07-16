@@ -3297,20 +3297,24 @@ class MainWindow(QMainWindow):
                 # Check if all non-None positions are equal to 324.05 and motor already at top pos
                 if all(pos is None or abs(pos - 324.05) < 0.01 for pos in motor_positions):
                     try:
-                        if self.motor_worker:
+                        if self.motor_worker and self.motor_worker.running:
                             current_pos = self.motor_worker.get_current_position()
-                            if abs(current_pos - 324.05) < 0.01:
+                            if abs(current_pos - 324.05) < 0.05:
                                 self.logger.info(
                                     "Motor not required - already at maximum position (324.05)")
-                                return False
+                                self.motor_flag = False  # Motor not required
                             else:
                                 self.motor_flag = True
                                 self.logger.info(
                                     "Motor required - needs to move to maximum position (324.05)")
+                        else:
+                            # Motor not connected, so not required
+                            self.logger.info("Motor not required - motor not connected")
+                            self.motor_flag = False
                     except Exception as e:
                         self.logger.error(f"Error checking motor position: {e}")
                         self.logger.info("Assuming motor not required due to error")
-                        return False
+                        self.motor_flag = False  # Assume motor not required on error
                 else:
                     self.motor_flag = True
                     self.logger.info("Motor required")
