@@ -1380,8 +1380,11 @@ class MainWindow(QMainWindow):
             # Stop data recording if active
             if self.saving:
                 self.plot_widget.stop_recording()
+                # Temporarily block signals to prevent triggering clicked event
+                self.beginSaveButton.blockSignals(True)
                 self.beginSaveButton.setText("Begin Saving")
                 self.beginSaveButton.setChecked(False)
+                self.beginSaveButton.blockSignals(False)
                 self.saving = False
                 self.logger.info("Stopped data recording")
             
@@ -1928,8 +1931,11 @@ class MainWindow(QMainWindow):
                         self.logger.info(
                             "Stopping data recording due to Arduino disconnection")
                         self.plot_widget.stop_recording()
+                        # Temporarily block signals to prevent triggering clicked event
+                        self.beginSaveButton.blockSignals(True)
                         self.beginSaveButton.setText("Begin Saving")
                         self.beginSaveButton.setChecked(False)
+                        self.beginSaveButton.blockSignals(False)
                         self.saving = False
                     self.uncheck_all_valve_controls()
                     self.cleanup_arduino_worker()
@@ -2081,8 +2087,11 @@ class MainWindow(QMainWindow):
                     self.logger.info(
                         "Stopping data recording due to Arduino disconnection")
                     self.plot_widget.stop_recording()
+                    # Temporarily block signals to prevent triggering clicked event
+                    self.beginSaveButton.blockSignals(True)
                     self.beginSaveButton.setText("Begin Saving")
                     self.beginSaveButton.setChecked(False)
+                    self.beginSaveButton.blockSignals(False)
                     self.saving = False
                 self.uncheck_all_valve_controls()
                 self.cleanup_arduino_worker()
