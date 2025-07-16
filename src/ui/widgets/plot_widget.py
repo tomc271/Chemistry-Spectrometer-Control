@@ -87,6 +87,10 @@ class PlotWidget(QWidget):
         self.recording = False
         self.save_file = None
         self.csv_writer = None
+        
+        # Add separate time tracking for CSV recording
+        self.csv_start_time = None  # Time when CSV recording started
+        self.current_save_path = None  # Track current save path
 
         self.logger = logging.getLogger(__name__)
 
@@ -128,7 +132,13 @@ class PlotWidget(QWidget):
         # Save data if recording
         if self.recording and self.csv_writer:
             try:
-                row = [current_time] + readings
+                # Calculate CSV time relative to when recording started
+                if self.csv_start_time is not None:
+                    csv_time = time.time() - self.csv_start_time
+                else:
+                    csv_time = 0.0  # Fallback if csv_start_time is not set
+                
+                row = [csv_time] + readings
                 self.logger.debug(f"Writing row to CSV: {row}")
                 self.csv_writer.writerow(row)
                 self.save_file.flush()  # Ensure data is written to disk
@@ -234,7 +244,7 @@ class PlotWidget(QWidget):
             self.logger.info(f"Attempting to start recording to {filepath}")
 
             # Check if already recording to the same file
-            if self.recording and self.save_file and self.save_file.name == filepath:
+            if self.recording and self.current_save_path == filepath:
                 self.logger.info(
                     "Already recording to the same file - continuing")
                 return True
@@ -257,6 +267,11 @@ class PlotWidget(QWidget):
             header = ['Time', 'Rig', 'Inlet', 'Tube', 'Outlet']
             self.logger.debug(f"Writing CSV header: {header}")
             self.csv_writer.writerow(header)
+
+            # Set CSV start time and save path
+            self.csv_start_time = time.time()
+            self.current_save_path = filepath
+            self.logger.info(f"CSV recording started at {self.csv_start_time} for file: {filepath}")
 
             # Add a small delay to ensure clean timing
             time.sleep(0.1)  # 100ms delay, adjust this if anomaly persists
@@ -290,6 +305,14 @@ class PlotWidget(QWidget):
                 finally:
                     self.save_file = None
                     self.csv_writer = None
+                    # Note: Don't reset csv_start_time or current_save_path here
+                    # They should persist until the save file location changes
+
+    def reset_csv_time_system(self):
+        """Reset the CSV time system when save file location changes."""
+        self.csv_start_time = None
+        self.current_save_path = None
+        self.logger.info("CSV time system reset - new save location detected")
 
     def clear_plot(self, reset_time=False):
         """Clear all plot data and optionally reset the time.

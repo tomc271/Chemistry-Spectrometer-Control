@@ -2539,6 +2539,9 @@ class MainWindow(QMainWindow):
                 # Update the save path text field
                 self.savePathEdit.setText(file_path)
                 self.logger.info(f"Save path set to: {file_path}")
+                
+                # Reset CSV time system when save path changes
+                self.plot_widget.reset_csv_time_system()
 
         except Exception as e:
             self.logger.error(f"Error setting save path: {e}")
@@ -3365,6 +3368,8 @@ class MainWindow(QMainWindow):
                     if seq_save_path.endswith('.csv'):
                         self.savePathEdit.setText(seq_save_path)
                         self.prev_save_path = seq_save_path
+                        # Reset CSV time system when save path changes
+                        self.plot_widget.reset_csv_time_system()
                         # Don't set saving=True until after start_recording succeeds
                         if self.on_beginSaveButton_clicked(True):
                             self.saving = True
@@ -3373,6 +3378,8 @@ class MainWindow(QMainWindow):
                             seq_save_path, f"pressure_data_{time.strftime('%m%d-%H%M')}.csv").replace("/", "\\")
                         self.savePathEdit.setText(new_path)
                         self.prev_save_path = new_path
+                        # Reset CSV time system when save path changes
+                        self.plot_widget.reset_csv_time_system()
                         if self.on_beginSaveButton_clicked(True):
                             self.saving = True
                 elif seq_save_path == "None":   # No save path means stop saving
@@ -3387,6 +3394,8 @@ class MainWindow(QMainWindow):
                         False)  # Stop current recording
                     self.savePathEdit.setText(seq_save_path)
                     self.prev_save_path = seq_save_path
+                    # Reset CSV time system when save path changes
+                    self.plot_widget.reset_csv_time_system()
                     # Start new recording
                     if self.on_beginSaveButton_clicked(True):
                         self.saving = True
