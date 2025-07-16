@@ -245,11 +245,10 @@ class PlotWidget(QWidget):
                     "Already recording to a different file - stopping current recording")
                 self.stop_recording()
 
-            # Reset start time and clear plot data
-            # self.start_time = time.time()
-            else:
-                # Don't reset time again since we just did
-                self.clear_plot(reset_time=False)
+            # Don't clear plot data when starting new recording - preserve existing plot
+            # Only reset start time if this is the first recording
+            if not hasattr(self, '_has_recorded_before'):
+                self._has_recorded_before = True
 
             self.save_file = open(filepath, 'w', newline='')
             self.csv_writer = csv.writer(self.save_file)

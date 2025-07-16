@@ -912,7 +912,7 @@ class MotorWorker(QThread):
         """Set motor speed.
 
         Args:
-            speed: Speed value (0-1000)
+            speed: Speed value (0-6500)
 
         Returns:
             bool: True if successful
