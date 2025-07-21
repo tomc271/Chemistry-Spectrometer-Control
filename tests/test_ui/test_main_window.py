@@ -37,14 +37,14 @@ def mock_config():
 def mock_workers():
     """Create mock workers."""
     with patch('src.workers.arduino_worker.ArduinoWorker') as mock_arduino, \
-         patch('src.workers.motor_worker.MotorWorker') as mock_motor:
-        
+            patch('src.workers.motor_worker.MotorWorker') as mock_motor:
+
         arduino = mock_arduino.return_value
         arduino.running = False
         arduino.controller.mode = 0
         motor = mock_motor.return_value
         motor.running = False
-        
+
         yield arduino, motor
 
 
@@ -52,7 +52,7 @@ def mock_workers():
 def window(app, mock_config, mock_workers):
     """Create main window instance with test mode enabled."""
     with patch('src.ui.main_window.PlotWidget'), \
-         patch('src.ui.main_window.LogWidget'):
+            patch('src.ui.main_window.LogWidget'):
         window = MainWindow(test_mode=True)
         yield window
 
@@ -60,7 +60,7 @@ def window(app, mock_config, mock_workers):
 def test_initialization(window, mock_workers):
     """Test window initialization."""
     arduino_worker, motor_worker = mock_workers
-    
+
     assert window.windowTitle() == "SSBubble Control"
     assert window.test_mode is True
     assert hasattr(window, 'arduino_worker')
@@ -71,7 +71,7 @@ def test_load_sequence_valid(window, tmp_path):
     """Test loading a valid sequence file."""
     sequence_file = tmp_path / "sequence.txt"
     sequence_content = "d100m500\nC:/test/path\n"
-    
+
     with patch('builtins.open', mock_open(read_data=sequence_content)):
         with patch('pathlib.Path.exists', return_value=True):
             assert window.load_sequence() is True
@@ -91,10 +91,10 @@ def test_load_sequence_invalid(window):
 def test_execute_step(window, mock_workers):
     """Test executing a sequence step."""
     arduino_worker, motor_worker = mock_workers
-    
+
     step = Step(step_type='b', time_length=100, motor_position=500)
     window.execute_step(step)
-    
+
     # Verify valve states for bubble step
     arduino_worker.set_valves.assert_called_once()
     if window.motor_flag:
@@ -104,9 +104,9 @@ def test_execute_step(window, mock_workers):
 def test_emergency_stop(window, mock_workers):
     """Test emergency stop functionality."""
     arduino_worker, motor_worker = mock_workers
-    
+
     window.emergency_stop()
-    
+
     motor_worker.stop.assert_called_once()
     arduino_worker.depressurize.assert_called_once()
 
@@ -114,12 +114,12 @@ def test_emergency_stop(window, mock_workers):
 def test_valve_controls(window, mock_workers):
     """Test valve control functionality."""
     arduino_worker, _ = mock_workers
-    
+
     # Test enabling controls
     window.toggle_valve_controls(True)
     for button in window.valve_buttons:
         assert button.isEnabled()
-    
+
     # Test disabling controls
     window.toggle_valve_controls(False)
     for button in window.valve_buttons:
@@ -130,11 +130,11 @@ def test_handle_sequence_file(window, tmp_path):
     """Test sequence file handling."""
     sequence_path = tmp_path / "sequence.txt"
     prospa_path = tmp_path / "prospa.txt"
-    
+
     with patch('pathlib.Path') as mock_path:
         mock_path.return_value = sequence_path
         window.handle_sequence_file(True)
-        
+
         # Verify prospa file written with success status
         assert prospa_path.exists()
 
@@ -142,13 +142,13 @@ def test_handle_sequence_file(window, tmp_path):
 def test_close_event(window, mock_workers):
     """Test application shutdown."""
     arduino_worker, motor_worker = mock_workers
-    
+
     # Create mock event
     event = Mock()
-    
+
     # Trigger close
     window.closeEvent(event)
-    
+
     # Verify cleanup
     arduino_worker.stop.assert_called_once()
     motor_worker.stop.assert_called_once()
@@ -159,16 +159,16 @@ def test_start_sequence(window, mock_workers):
     """Test sequence start functionality."""
     arduino_worker, motor_worker = mock_workers
     arduino_worker.running = True
-    
+
     # Setup test sequence
     window.steps = [
         Step('p', 1000),  # Pressurize for 1 second
         Step('v', 500)    # Vent for 0.5 seconds
     ]
-    
+
     with patch('PyQt6.QtCore.QTimer.singleShot') as mock_timer:
         window.start_sequence()
-        
+
         # Verify first step execution
         assert len(window.steps) == 2
         arduino_worker.set_valves.assert_called_once()
@@ -179,16 +179,16 @@ def test_next_step(window, mock_workers):
     """Test sequence step progression."""
     arduino_worker, _ = mock_workers
     arduino_worker.running = True
-    
+
     # Setup test sequence
     window.steps = [
         Step('v', 500),    # Vent for 0.5 seconds
         Step('d', 1000)    # Delay for 1 second
     ]
-    
+
     with patch('PyQt6.QtCore.QTimer.singleShot') as mock_timer:
         window.next_step()
-        
+
         # Verify step progression
         assert len(window.steps) == 1
         assert window.steps[0].step_type == 'd'
@@ -199,15 +199,15 @@ def test_sequence_completion(window, mock_workers):
     """Test sequence completion handling."""
     arduino_worker, _ = mock_workers
     arduino_worker.running = True
-    
+
     # Setup final step
     window.steps = [Step('d', 1000)]
     window.saving = True
     window.step_timer = Mock()
-    
+
     with patch.object(window.plot_widget, 'stop_recording') as mock_stop_recording:
         window.next_step()
-        
+
         # Verify cleanup
         assert len(window.steps) == 0
         assert not window.saving
@@ -225,11 +225,11 @@ def test_load_valve_macro(window):
             "Timer": 2.0
         }
     ]
-    
+
     with patch('builtins.open', mock_open(read_data=json.dumps(mock_macro_data))), \
-         patch('pathlib.Path.exists', return_value=True):
+            patch('pathlib.Path.exists', return_value=True):
         macro = window.load_valve_macro(1)
-        
+
         assert macro is not None
         assert macro["Label"] == "Test Macro"
         assert macro["Timer"] == 2.0
@@ -239,20 +239,21 @@ def test_execute_valve_macro(window, mock_workers):
     """Test valve macro execution."""
     arduino_worker, _ = mock_workers
     arduino_worker.running = True
-    
+
     mock_macro = {
         "Macro No.": "Macro 1",
         "Label": "Test Macro",
         "Valves": ["Open", "Closed", "Open", "Closed", "Closed"],
         "Timer": 0.5
     }
-    
+
     with patch.object(window, 'load_valve_macro', return_value=mock_macro), \
-         patch('PyQt6.QtCore.QTimer.singleShot') as mock_timer:
+            patch('PyQt6.QtCore.QTimer.singleShot') as mock_timer:
         window.on_valveMacroButton_clicked(1)
-        
+
         # Verify valve states set
-        arduino_worker.set_valves.assert_called_once_with([1, 0, 1, 0, 0, 0, 0, 0])
+        arduino_worker.set_valves.assert_called_once_with(
+            [1, 0, 1, 0, 0, 0, 0, 0])
         # Verify timer setup for auto-reset
         mock_timer.assert_called_once()
 
@@ -267,11 +268,11 @@ def test_load_motor_macro(window):
             "Description": "Test position"
         }
     ]
-    
+
     with patch('builtins.open', mock_open(read_data=json.dumps(mock_macro_data))), \
-         patch('pathlib.Path.exists', return_value=True):
+            patch('pathlib.Path.exists', return_value=True):
         macro = window.load_motor_macro(1)
-        
+
         assert macro is not None
         assert macro["Label"] == "Position 1"
         assert macro["Position"] == 500
@@ -281,17 +282,17 @@ def test_execute_motor_macro(window, mock_workers):
     """Test motor macro execution."""
     _, motor_worker = mock_workers
     motor_worker.running = True
-    
+
     mock_macro = {
         "Macro No.": "Macro 1",
         "Label": "Position 1",
         "Position": 500
     }
-    
+
     with patch.object(window, 'load_motor_macro', return_value=mock_macro), \
-         patch('PyQt6.QtCore.QTimer') as mock_timer:
+            patch('PyQt6.QtCore.QTimer') as mock_timer:
         window.on_motorMacroButton_clicked(1)
-        
+
         # Verify motor movement
         motor_worker.move_to.assert_called_once_with(500)
         # Verify position check timer setup
@@ -301,11 +302,11 @@ def test_execute_motor_macro(window, mock_workers):
 def test_save_path_selection(window):
     """Test save path selection dialog."""
     mock_path = "/test/path/data.csv"
-    
-    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName', 
-              return_value=(mock_path, "CSV Files (*.csv)")):
+
+    with patch('PyQt6.QtWidgets.QFileDialog.getSaveFileName',
+               return_value=(mock_path, "CSV Files (*.csv)")):
         window.on_selectSavePathButton_clicked()
-        
+
         assert window.savePathEdit.text() == mock_path
 
 
@@ -313,25 +314,60 @@ def test_begin_save_with_custom_path(window):
     """Test data saving with custom path."""
     mock_path = "/test/path/data.csv"
     window.savePathEdit.setText(mock_path)
-    
+
     with patch('pathlib.Path.mkdir') as mock_mkdir, \
-         patch.object(window.plot_widget, 'start_recording', return_value=True):
+            patch.object(window.plot_widget, 'start_recording', return_value=True):
         window.on_beginSaveButton_clicked(True)
-        
+
         assert window.saving is True
         mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
+
+
+def test_filename_suffix_generation(window):
+    """Test that filename suffixes are added when files already exist."""
+    with patch('pathlib.Path.exists') as mock_exists, \
+            patch('time.strftime', return_value="20231201_143022"):
+
+        # First call: file doesn't exist, should return base filename
+        mock_exists.return_value = False
+        filename1 = window._generate_timestamped_filename("/test/path")
+        assert filename1 == "/test/path/pressure_data_20231201_143022.csv"
+
+        # Second call: file exists, should return filename with _1 suffix
+        mock_exists.return_value = True
+        filename2 = window._generate_timestamped_filename("/test/path")
+        assert filename2 == "/test/path/pressure_data_20231201_143022_1.csv"
+
+
+def test_timestamped_filename_detection_with_suffixes(window):
+    """Test that timestamped filenames with suffixes are correctly detected."""
+    # Test base timestamped filename
+    assert window._is_timestamped_filename(
+        "pressure_data_20231201_143022.csv") is True
+
+    # Test timestamped filename with suffix
+    assert window._is_timestamped_filename(
+        "pressure_data_20231201_143022_1.csv") is True
+    assert window._is_timestamped_filename(
+        "pressure_data_20231201_143022_2.csv") is True
+
+    # Test other formats with suffixes
+    assert window._is_timestamped_filename(
+        "pressure_data_1201-1430_1.csv") is True
+    assert window._is_timestamped_filename(
+        "pressure_data_2023-12-01_14-30-22_1.csv") is True
 
 
 def test_sequence_file_cleanup(window):
     """Test sequence file cleanup operations."""
     with patch('pathlib.Path.unlink') as mock_unlink, \
-         patch('builtins.open', mock_open()) as mock_file:
+            patch('builtins.open', mock_open()) as mock_file:
         window.handle_sequence_file(True)
-        
+
         # Verify prospa.txt written with success status
         mock_file.assert_called_with(Path(r"C:\ssbubble\prospa.txt"), 'w')
         mock_file().write.assert_called_once_with('1')
-        
+
         # Verify sequence file deletion (not in test mode)
         if not window.test_mode:
             mock_unlink.assert_called_once()

@@ -19,6 +19,7 @@ from pathlib import Path
 import time
 import json
 import os
+import re
 
 from utils.config import Config
 from utils.timing_logger import setup_timing_logger, get_timing_logger  # Add import
@@ -923,7 +924,8 @@ class MainWindow(QMainWindow):
             font.setPointSize(10)
             btn.setFont(font)
             setattr(self, f"motor_macro{i}_button", btn)
-            row = (i + 3) // 2  # Adjusted row calculation to account for new buttons
+            # Adjusted row calculation to account for new buttons
+            row = (i + 3) // 2
             col = (i - 1) % 2
             motor_macro_layout.addWidget(btn, row, col, 1, 1)
 
@@ -1076,8 +1078,10 @@ class MainWindow(QMainWindow):
                 self.on_motorToBottomButton_clicked)
             self.motor_to_top_button.clicked.connect(
                 self.on_motorToTopButton_clicked)
-            self.motor_ptf_bore_button.clicked.connect(self.on_motorPtfBoreButton_clicked)
-            self.motor_ptf_halbach_button.clicked.connect(self.on_motorPtfHalbachButton_clicked)
+            self.motor_ptf_bore_button.clicked.connect(
+                self.on_motorPtfBoreButton_clicked)
+            self.motor_ptf_halbach_button.clicked.connect(
+                self.on_motorPtfHalbachButton_clicked)
 
             # Motor macro buttons
             for i in range(1, 5):
@@ -1195,14 +1199,14 @@ class MainWindow(QMainWindow):
 
     def cleanup_motor_worker(self):
         """Clean up motor worker resources and update UI state.
-        
+
         This function handles:
         1. Stopping all timers
         2. Disconnecting all signals
         3. Stopping the motor controller
         4. Stopping and cleaning up the worker thread
         5. Error handling and logging
-        
+
         Note: UI state updates should be handled by the calling function.
         """
         try:
@@ -1226,18 +1230,21 @@ class MainWindow(QMainWindow):
                     try:
                         if hasattr(self.motor_worker, signal_name):
                             try:
-                                getattr(self.motor_worker, signal_name).disconnect()
+                                getattr(self.motor_worker,
+                                        signal_name).disconnect()
                             except TypeError:
                                 pass  # Signal wasn't connected
                     except Exception as e:
-                        self.logger.warning(f"Error disconnecting {signal_name} signal: {e}")
+                        self.logger.warning(
+                            f"Error disconnecting {signal_name} signal: {e}")
 
                 # Try to stop the motor controller first
                 try:
                     if hasattr(self.motor_worker, 'controller'):
                         self.motor_worker.controller.stop_motor()
                 except Exception as e:
-                    self.logger.warning(f"Error stopping motor controller: {e}")
+                    self.logger.warning(
+                        f"Error stopping motor controller: {e}")
 
                 # Properly stop the worker thread
                 self.motor_worker.cleanup()
@@ -1286,12 +1293,12 @@ class MainWindow(QMainWindow):
                     # Delete the cleanup file
                     cleanup_path.unlink()
                     self.logger.info("Cleanup file found and deleted")
-                    
+
                     # Execute cleanup procedure
                     self.execute_cleanup()
                 except Exception as e:
                     self.logger.error(f"Error processing cleanup file: {e}")
-            
+
             # Check for sequence file
             sequence_path = Path(r"C:\ssbubble\sequence.txt")
             if sequence_path.exists():
@@ -1366,17 +1373,17 @@ class MainWindow(QMainWindow):
         """Execute cleanup procedure when cleanup.txt file is detected."""
         try:
             self.logger.info("Starting cleanup procedure")
-            
+
             # Stop any running sequence
             if hasattr(self, 'step_timer') and self.step_timer:
                 self.step_timer.stop()
                 self.logger.info("Stopped running sequence")
-            
+
             # Reset valves to default state
             if self.arduino_worker and self.arduino_worker.running:
                 self.reset_valves()
                 self.logger.info("Reset valves to default state")
-            
+
             # Stop data recording if active
             if self.saving:
                 self.plot_widget.stop_recording()
@@ -1387,28 +1394,28 @@ class MainWindow(QMainWindow):
                 self.beginSaveButton.blockSignals(False)
                 self.saving = False
                 self.logger.info("Stopped data recording")
-            
+
             # Uncheck all valve controls
             self.uncheck_all_valve_controls()
-            
+
             # Uncheck all motor buttons
             self.uncheck_motor_buttons()
-            
+
             # Reset sequence state
             self.steps = []
             self.motor_flag = False
-            
+
             # Update sequence status
             self.update_sequence_status("Finished")
             self.update_sequence_info("--", 0, 0, 0)
-            
+
             # Disable sequence mode on motor if connected
             if self.motor_worker and self.motor_worker.running:
                 self.motor_worker.set_sequence_mode(False)
                 self.logger.info("Disabled motor sequence mode")
-            
+
             self.logger.info("Cleanup procedure completed successfully")
-            
+
         except Exception as e:
             self.logger.error(f"Error during cleanup procedure: {e}")
             self.handle_error(f"Cleanup procedure failed: {str(e)}")
@@ -1755,7 +1762,7 @@ class MainWindow(QMainWindow):
             duration = self.bubbleTimeDoubleSpinBox.value()
             # Store the original duration for reset
             self.original_bubble_duration = duration
-            
+
             # Open inlet and outlet valves
             valve_states = self.arduino_worker.get_valve_states()
             valve_states[2] = 1  # Valve 2 (inlet)
@@ -1766,9 +1773,10 @@ class MainWindow(QMainWindow):
 
             # Create countdown timer to update spinbox
             self.bubble_countdown_timer = QTimer()
-            self.bubble_countdown_timer.timeout.connect(self.update_bubble_countdown)
+            self.bubble_countdown_timer.timeout.connect(
+                self.update_bubble_countdown)
             self.bubble_countdown_timer.start(100)  # Update every 100ms
-            
+
             # Start timer to close valves after duration
             QTimer.singleShot(int(duration * 1000), self.stop_bubble)
             self.logger.info(f"Quick bubble started for {duration}s")
@@ -1785,11 +1793,12 @@ class MainWindow(QMainWindow):
             if hasattr(self, 'original_bubble_duration'):
                 # Calculate remaining time
                 current_value = self.bubbleTimeDoubleSpinBox.value()
-                remaining = max(0.0, current_value - 0.1)  # Subtract 100ms (0.1s)
-                
+                # Subtract 100ms (0.1s)
+                remaining = max(0.0, current_value - 0.1)
+
                 # Update spinbox value
                 self.bubbleTimeDoubleSpinBox.setValue(remaining)
-                
+
                 # If countdown is complete, stop the timer
                 if remaining <= 0:
                     if hasattr(self, 'bubble_countdown_timer'):
@@ -1805,18 +1814,19 @@ class MainWindow(QMainWindow):
             # Use the reset_valves method to preserve inlet/outlet valves
             self.reset_valves()
             self.quickBubbleButton.setChecked(False)
-            
+
             # Stop countdown timer if it's running
             if hasattr(self, 'bubble_countdown_timer'):
                 self.bubble_countdown_timer.stop()
                 self.bubble_countdown_timer.deleteLater()
                 delattr(self, 'bubble_countdown_timer')
-            
+
             # Reset spinbox to original value
             if hasattr(self, 'original_bubble_duration'):
-                self.bubbleTimeDoubleSpinBox.setValue(self.original_bubble_duration)
+                self.bubbleTimeDoubleSpinBox.setValue(
+                    self.original_bubble_duration)
                 delattr(self, 'original_bubble_duration')
-            
+
             self.logger.info("Quick bubble complete")
 
     def disable_valve_controls(self, disabled: bool = True):
@@ -1989,8 +1999,10 @@ class MainWindow(QMainWindow):
                 self.arduino_worker.readings_updated.connect(
                     self.plot_widget.update_plot)
                 # Connect new status and error slots for robust UI update
-                self.arduino_worker.status_changed.connect(self.on_arduino_status_changed)
-                self.arduino_worker.error_occurred.connect(self.on_arduino_error_occurred)
+                self.arduino_worker.status_changed.connect(
+                    self.on_arduino_status_changed)
+                self.arduino_worker.error_occurred.connect(
+                    self.on_arduino_error_occurred)
                 # Only start the worker, do not update UI yet
                 self.arduino_worker.start()
             except Exception as e:
@@ -2037,7 +2049,8 @@ class MainWindow(QMainWindow):
                 self.disable_valve_controls(True)
                 self.disable_quick_controls(True)
             self.set_valve_mode(self.arduino_worker.mode)
-            self.logger.info(f"Connected to Arduino in mode {self.arduino_worker.mode}")
+            self.logger.info(
+                f"Connected to Arduino in mode {self.arduino_worker.mode}")
             # Create a timer to check connection status and update device status
             self.connection_check_timer = QTimer()
             self.connection_check_timer.setSingleShot(True)
@@ -2048,7 +2061,8 @@ class MainWindow(QMainWindow):
             # Update UI to disconnected state
             self.arduino_connect_btn.setText("Connect")
             if not self.test_mode:
-                self.arduino_warning_label.setText("Warning: Arduino not connected")
+                self.arduino_warning_label.setText(
+                    "Warning: Arduino not connected")
                 self.arduino_warning_label.setVisible(True)
             self.dev_checkbox.setEnabled(False)
             self.dev_checkbox.setChecked(False)
@@ -2066,7 +2080,7 @@ class MainWindow(QMainWindow):
         # Check if this is a disconnection error
         if "Arduino disconnected" in message or "Failed to connect" in message:
             self.logger.info(f"Arduino disconnection detected: {message}")
-            
+
             # Clean up Arduino worker similar to disconnect button press
             try:
                 self.cleanup_file_timer()
@@ -2225,7 +2239,7 @@ class MainWindow(QMainWindow):
             self.uncheck_motor_buttons()
             self.motor_to_bottom_button.setChecked(True)
             success = self.motor_worker.to_bottom()
-            
+
             if success:
                 # Stop any existing timer for this button
                 if hasattr(self, 'to_bottom_timer') and self.to_bottom_timer is not None:
@@ -2245,7 +2259,8 @@ class MainWindow(QMainWindow):
                         return
 
                     current_pos = self.motor_worker.get_current_position()
-                    if current_pos is not None and abs(current_pos - 0.0) < 0.1:  # Target position is 0.0 (bottom)
+                    # Target position is 0.0 (bottom)
+                    if current_pos is not None and abs(current_pos - 0.0) < 0.1:
                         self.motor_to_bottom_button.setChecked(False)
                         self.to_bottom_timer.stop()
                         self.to_bottom_timer = None
@@ -2262,7 +2277,7 @@ class MainWindow(QMainWindow):
             self.uncheck_motor_buttons()
             self.motor_to_top_button.setChecked(True)
             success = self.motor_worker.to_top()
-            
+
             if success:
                 # Stop any existing timer for this button
                 if hasattr(self, 'to_top_timer') and self.to_top_timer is not None:
@@ -2282,7 +2297,8 @@ class MainWindow(QMainWindow):
                         return
 
                     current_pos = self.motor_worker.get_current_position()
-                    if current_pos is not None and abs(current_pos - 324.05) < 0.1:  # Target position is 324.05 (top)
+                    # Target position is 324.05 (top)
+                    if current_pos is not None and abs(current_pos - 324.05) < 0.1:
                         self.motor_to_top_button.setChecked(False)
                         self.to_top_timer.stop()
                         self.to_top_timer = None
@@ -2299,7 +2315,7 @@ class MainWindow(QMainWindow):
             self.uncheck_motor_buttons()
             self.motor_ptf_bore_button.setChecked(True)
             success = self.motor_worker.to_ptf_bore()
-            
+
             if success:
                 # Stop any existing timer for this button
                 if hasattr(self, 'ptf_bore_timer') and self.ptf_bore_timer is not None:
@@ -2319,7 +2335,8 @@ class MainWindow(QMainWindow):
                         return
 
                     current_pos = self.motor_worker.get_current_position()
-                    if current_pos is not None and abs(current_pos - 91.08) < 0.1:  # Target position is 91.08
+                    # Target position is 91.08
+                    if current_pos is not None and abs(current_pos - 91.08) < 0.1:
                         self.motor_ptf_bore_button.setChecked(False)
                         self.ptf_bore_timer.stop()
                         self.ptf_bore_timer = None
@@ -2336,7 +2353,7 @@ class MainWindow(QMainWindow):
             self.uncheck_motor_buttons()
             self.motor_ptf_halbach_button.setChecked(True)
             success = self.motor_worker.to_ptf_halbach()
-            
+
             if success:
                 # Stop any existing timer for this button
                 if hasattr(self, 'ptf_halbach_timer') and self.ptf_halbach_timer is not None:
@@ -2356,7 +2373,8 @@ class MainWindow(QMainWindow):
                         return
 
                     current_pos = self.motor_worker.get_current_position()
-                    if current_pos is not None and abs(current_pos - 265.50) < 0.1:  # Target position is 265.50
+                    # Target position is 265.50
+                    if current_pos is not None and abs(current_pos - 265.50) < 0.1:
                         self.motor_ptf_halbach_button.setChecked(False)
                         self.ptf_halbach_timer.stop()
                         self.ptf_halbach_timer = None
@@ -2451,6 +2469,57 @@ class MainWindow(QMainWindow):
                     self.position_check_timer.stop()
                     self.position_check_timer = None
 
+    def _is_timestamped_filename(self, filepath: str) -> bool:
+        """Check if the given filepath contains a timestamped filename pattern."""
+        if not filepath:
+            return False
+
+        # Extract filename from path
+        filename = Path(filepath).name
+
+        # Check for common timestamp patterns in pressure data filenames
+        timestamp_patterns = [
+            r'pressure_data_\d{8}_\d{6}\.csv',  # YYYYMMDD_HHMMSS
+            # YYYYMMDD_HHMMSS with suffix (_1, _2, etc.)
+            r'pressure_data_\d{8}_\d{6}_\d+\.csv',
+            # YYYY-MM-DD_HH-MM-SS
+            r'pressure_data_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.csv',
+            # With suffix
+            r'pressure_data_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_\d+\.csv',
+            # MMDD-HHMM (current format)
+            r'pressure_data_\d{2}\d{2}-\d{2}\d{2}\.csv',
+            r'pressure_data_\d{2}\d{2}-\d{2}\d{2}_\d+\.csv',  # With suffix
+        ]
+
+        for pattern in timestamp_patterns:
+            if re.match(pattern, filename):
+                return True
+
+        return False
+
+    def _generate_timestamped_filename(self, folder_path: str) -> str:
+        """Generate a new timestamped filename in the given folder.
+
+        If a file with the same name already exists, adds a suffix (_1, _2, etc.)
+        to make the filename unique.
+        """
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        base_filename = f"pressure_data_{timestamp}.csv"
+        file_path = Path(folder_path) / base_filename
+
+        # If file doesn't exist, use the base filename
+        if not file_path.exists():
+            return str(file_path)
+
+        # If file exists, find the next available suffix
+        counter = 1
+        while True:
+            suffix_filename = f"pressure_data_{timestamp}_{counter}.csv"
+            suffix_path = Path(folder_path) / suffix_filename
+            if not suffix_path.exists():
+                return str(suffix_path)
+            counter += 1
+
     @pyqtSlot(bool)
     def on_beginSaveButton_clicked(self, checked=None):
         """Handle begin save button click."""
@@ -2476,10 +2545,23 @@ class MainWindow(QMainWindow):
 
                 if not save_path:
                     # Generate default save path with timestamp
-                    timestamp = time.strftime("%Y%m%d_%H%M%S")
-                    save_path = str(
-                        data_dir / f"pressure_data_{timestamp}.csv")
+                    save_path = self._generate_timestamped_filename(
+                        str(data_dir))
                     self.logger.debug(f"Generated save path: {save_path}")
+                else:
+                    # Check if the current path contains a timestamped filename
+                    if self._is_timestamped_filename(save_path):
+                        # Extract folder path and generate new timestamped filename
+                        folder_path = str(Path(save_path).parent)
+                        save_path = self._generate_timestamped_filename(
+                            folder_path)
+                        self.logger.debug(
+                            f"Generated new timestamped filename: {save_path}")
+                    else:
+                        # If it's not a timestamped filename, use as-is
+                        # But ensure it has .csv extension
+                        if not save_path.lower().endswith('.csv'):
+                            save_path += '.csv'
 
                 # Update the text field with the generated path
                 self.savePathEdit.setText(save_path)
@@ -2536,10 +2618,18 @@ class MainWindow(QMainWindow):
                 if not file_path.lower().endswith('.csv'):
                     file_path += '.csv'
 
-                # Update the save path text field
-                self.savePathEdit.setText(file_path)
-                self.logger.info(f"Save path set to: {file_path}")
-                
+                # Check if the selected file has a timestamped filename
+                if self._is_timestamped_filename(file_path):
+                    # Store only the folder path, not the full filename
+                    folder_path = str(Path(file_path).parent)
+                    self.savePathEdit.setText(folder_path)
+                    self.logger.info(
+                        f"Save folder set to: {folder_path} (timestamped filename detected)")
+                else:
+                    # Store the full path for non-timestamped filenames
+                    self.savePathEdit.setText(file_path)
+                    self.logger.info(f"Save path set to: {file_path}")
+
                 # Reset CSV time system when save path changes
                 self.plot_widget.reset_csv_time_system()
 
@@ -2619,7 +2709,8 @@ class MainWindow(QMainWindow):
 
                     # Send valve states to Arduino
                     self.arduino_worker.set_valves(valve_states)
-                    self.logger.info(f"Sent valve states for macro {macro_num}: {valve_states}")
+                    self.logger.info(
+                        f"Sent valve states for macro {macro_num}: {valve_states}")
 
                     # Update valve button states to reflect macro settings
                     for i in range(6):
@@ -2674,9 +2765,11 @@ class MainWindow(QMainWindow):
                     else:
                         # For timer = 0, don't set up auto-reset
                         # The macro will stay active until manually unchecked
-                        self.logger.info(f"Started persistent valve macro {macro_num}: {macro['Label']}")
+                        self.logger.info(
+                            f"Started persistent valve macro {macro_num}: {macro['Label']}")
 
-                    self.logger.info(f"Executed valve macro {macro_num}: {macro['Label']}")
+                    self.logger.info(
+                        f"Executed valve macro {macro_num}: {macro['Label']}")
                 else:
                     self.handle_error(f"Valve macro {macro_num} not found")
                     macro_button.setChecked(False)
@@ -2767,18 +2860,21 @@ class MainWindow(QMainWindow):
                     # Add a delay to allow Arduino to process the speed change
                     # This delay can be adjusted based on Arduino response time
                     motor_speed_delay = 500  # 500ms delay
-                    self.logger.info(f"Motor speed changed during sequence loading - adding {motor_speed_delay}ms delay")
-                    self.update_sequence_status(f"Waiting for motor speed to update ({motor_speed_delay}ms)...")
-                    
+                    self.logger.info(
+                        f"Motor speed changed during sequence loading - adding {motor_speed_delay}ms delay")
+                    self.update_sequence_status(
+                        f"Waiting for motor speed to update ({motor_speed_delay}ms)...")
+
                     # Store the delay time for logging purposes
                     self._motor_speed_delay_applied = motor_speed_delay
-                    
+
                     # Clear the flag
                     self._motor_speed_changed_during_sequence = False
 
                 if motor_speed_delay > 0:
                     # Schedule the sequence start with the motor speed delay
-                    QTimer.singleShot(motor_speed_delay, self._start_sequence_execution)
+                    QTimer.singleShot(motor_speed_delay,
+                                      self._start_sequence_execution)
                     return
 
                 # No delay needed, start immediately
@@ -2793,7 +2889,8 @@ class MainWindow(QMainWindow):
         try:
             # Log if motor speed delay was applied
             if hasattr(self, '_motor_speed_delay_applied'):
-                self.logger.info(f"Sequence starting after {self._motor_speed_delay_applied}ms motor speed delay")
+                self.logger.info(
+                    f"Sequence starting after {self._motor_speed_delay_applied}ms motor speed delay")
                 delattr(self, '_motor_speed_delay_applied')  # Clean up
 
             # Clear plot before starting new sequence
@@ -3312,11 +3409,14 @@ class MainWindow(QMainWindow):
                                     "Motor required - needs to move to maximum position (324.05)")
                         else:
                             # Motor not connected, so not required
-                            self.logger.info("Motor not required - motor not connected")
+                            self.logger.info(
+                                "Motor not required - motor not connected")
                             self.motor_flag = False
                     except Exception as e:
-                        self.logger.error(f"Error checking motor position: {e}")
-                        self.logger.info("Assuming motor not required due to error")
+                        self.logger.error(
+                            f"Error checking motor position: {e}")
+                        self.logger.info(
+                            "Assuming motor not required due to error")
                         self.motor_flag = False  # Assume motor not required on error
                 else:
                     self.motor_flag = True
@@ -3353,7 +3453,7 @@ class MainWindow(QMainWindow):
                     speed_text = global_motor_speed.title()
                     self.motor_speed_combo.setCurrentText(speed_text)
                     # This will trigger the on_motor_speed_changed slot
-                    
+
                     # Add a flag to indicate that motor speed was changed during sequence loading
                     # This will be used to add a delay before sequence execution
                     self._motor_speed_changed_during_sequence = True
@@ -3374,10 +3474,9 @@ class MainWindow(QMainWindow):
                         if self.on_beginSaveButton_clicked(True):
                             self.saving = True
                     else:
-                        new_path = os.path.join(
-                            seq_save_path, f"pressure_data_{time.strftime('%m%d-%H%M')}.csv").replace("/", "\\")
-                        self.savePathEdit.setText(new_path)
-                        self.prev_save_path = new_path
+                        # Store only the folder path, let the save button generate timestamped filename
+                        self.savePathEdit.setText(seq_save_path)
+                        self.prev_save_path = seq_save_path
                         # Reset CSV time system when save path changes
                         self.plot_widget.reset_csv_time_system()
                         if self.on_beginSaveButton_clicked(True):
@@ -3732,7 +3831,7 @@ class MainWindow(QMainWindow):
     def _handle_position_reached(self, position):
         """Handle motor position reached signal."""
         self.logger.info(f"Motor reached position: {position}mm")
-        
+
         # Uncheck buttons based on target position reached
         if abs(position - 0.0) < 0.1:  # Bottom position
             if hasattr(self, 'motor_to_bottom_button'):
@@ -3784,12 +3883,12 @@ class MainWindow(QMainWindow):
         # Clean up button-specific timers
         button_timers = [
             'to_top_timer',
-            'to_bottom_timer', 
+            'to_bottom_timer',
             'ptf_bore_timer',
             'ptf_halbach_timer',
             'position_check_timer'  # Keep the original macro timer
         ]
-        
+
         for timer_name in button_timers:
             if hasattr(self, timer_name) and getattr(self, timer_name) is not None:
                 timer = getattr(self, timer_name)
@@ -3816,7 +3915,7 @@ class MainWindow(QMainWindow):
     def handle_critical_motor_error(self, message: str):
         """Handle critical motor errors by stopping the sequence, cleaning up, and alerting the user."""
         self.logger.critical(f"Critical motor error: {message}")
-        
+
         # Stop any running sequence
         try:
             if hasattr(self, 'step_timer') and self.step_timer:
@@ -3835,11 +3934,12 @@ class MainWindow(QMainWindow):
             self.motor_calibrate_btn.setEnabled(False)
             self.disable_motor_controls(True)
         except Exception as e:
-            self.logger.error(f"Error during motor cleanup after critical error: {e}")
+            self.logger.error(
+                f"Error during motor cleanup after critical error: {e}")
 
         # Show critical error dialog
-        #QMessageBox.critical(self, "Critical Motor Error",
+        # QMessageBox.critical(self, "Critical Motor Error",
         #                   f"A critical error occurred with the motor and the sequence has been stopped.\n\nError: {message}")
-        
+
         # Update device status
         self.update_device_status()

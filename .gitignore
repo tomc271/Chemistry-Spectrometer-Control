@@ -16,6 +16,25 @@ __pycache__/
 *$py.class
 *.so
 
+# Python compiled files (all levels)
+*.pyc
+*.pyo
+*.pyd
+*.cpython-*.pyc
+*.cpython-*.pyo
+*.cpython-*.pyd
+
+# Python cache directories and files (recursive - all depths)
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/*.cpython-*.pyc
+**/*.cpython-*.pyo
+**/*.cpython-*.pyd
+
 # PyInstaller specific
 *.spec
 *.exe
