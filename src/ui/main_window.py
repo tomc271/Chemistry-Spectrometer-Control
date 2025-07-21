@@ -1802,6 +1802,9 @@ class MainWindow(QMainWindow):
             # Store the original duration for reset
             self.original_bubble_duration = duration
 
+            # Store the start time for accurate countdown
+            self.bubble_start_time = time.time()
+
             # Open inlet and outlet valves
             valve_states = self.arduino_worker.get_valve_states()
             valve_states[2] = 1  # Valve 2 (inlet)
@@ -1830,11 +1833,12 @@ class MainWindow(QMainWindow):
     def update_bubble_countdown(self):
         """Update the bubble countdown timer display."""
         try:
-            if hasattr(self, 'original_bubble_duration'):
+            if hasattr(self, 'original_bubble_duration') and hasattr(self, 'bubble_start_time'):
+                # Calculate elapsed time since bubble started
+                elapsed_time = time.time() - self.bubble_start_time
                 # Calculate remaining time
-                current_value = self.bubbleTimeDoubleSpinBox.value()
-                # Subtract 100ms (0.1s)
-                remaining = max(0.0, current_value - 0.1)
+                remaining = max(
+                    0.0, self.original_bubble_duration - elapsed_time)
 
                 # Update spinbox value
                 self.bubbleTimeDoubleSpinBox.setValue(remaining)
@@ -1866,6 +1870,10 @@ class MainWindow(QMainWindow):
                 self.bubbleTimeDoubleSpinBox.setValue(
                     self.original_bubble_duration)
                 delattr(self, 'original_bubble_duration')
+
+            # Clean up start time
+            if hasattr(self, 'bubble_start_time'):
+                delattr(self, 'bubble_start_time')
 
             # Clear active valve control if it was quick bubble
             if self.active_valve_control == 'quick_bubble':
