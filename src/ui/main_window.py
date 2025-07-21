@@ -3128,7 +3128,7 @@ class MainWindow(QMainWindow):
                 self.motor_worker.move_to(step.motor_position)
             else:
                 self.logger.info(
-                    "Skipping motor movement - motor not required for this sequence")
+                    f"Skipping motor movement to {step.motor_position}mm - motor not required for this sequence (all positions at maximum)")
 
     def disable_other_valve_controls(self, active_macro_num: int):
         """Disable all valve controls except the active macro button.
@@ -3509,33 +3509,22 @@ class MainWindow(QMainWindow):
                 if any(pos is not None and pos < 0 for pos in motor_positions):
                     self.logger.error("Motor positions must be non-negative")
                     return False
-                # Check if all non-None positions are equal to 324.05 and motor already at top pos
+
+                # Check if all non-None positions are equal to 324.05 (maximum position)
                 if all(pos is None or abs(pos - 324.05) < 0.01 for pos in motor_positions):
-                    try:
-                        if self.motor_worker and self.motor_worker.running:
-                            current_pos = self.motor_worker.get_current_position()
-                            if abs(current_pos - 324.05) < 0.05:
-                                self.logger.info(
-                                    "Motor not required - already at maximum position (324.05)")
-                                self.motor_flag = False  # Motor not required
-                            else:
-                                self.motor_flag = True
-                                self.logger.info(
-                                    "Motor required - needs to move to maximum position (324.05)")
-                        else:
-                            # Motor not connected, so not required
-                            self.logger.info(
-                                "Motor not required - motor not connected")
-                            self.motor_flag = False
-                    except Exception as e:
-                        self.logger.error(
-                            f"Error checking motor position: {e}")
-                        self.logger.info(
-                            "Assuming motor not required due to error")
-                        self.motor_flag = False  # Assume motor not required on error
+                    # All motor positions in sequence are at maximum position
+                    self.logger.info(
+                        "Motor not required - all sequence positions are at maximum position (324.05)")
+                    self.motor_flag = False  # Motor not required
                 else:
+                    # At least one position is not at maximum, so motor is required
                     self.motor_flag = True
-                    self.logger.info("Motor required")
+                    self.logger.info(
+                        "Motor required - sequence contains non-maximum positions")
+            except ValueError:
+                self.logger.error(
+                    f"Invalid motor positions in sequence file - must be numbers or 'None'. Values: {motor_positions}")
+                return False
             except ValueError:
                 self.logger.error(
                     f"Invalid motor positions in sequence file - must be numbers or 'None'. Values: {motor_positions}")
