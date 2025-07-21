@@ -159,6 +159,10 @@ class MainWindow(QMainWindow):
         # Add previous save path tracking
         self.prev_save_path = None
 
+        # Track active valve control button for mutual exclusion
+        # None, 'quick_bubble', 'build_pressure', 'quick_vent', 'slow_vent', or macro number (1-4)
+        self.active_valve_control = None
+
         # Setup timing logger
         self.timing_logger = setup_timing_logger(timing_mode)
 
@@ -1614,6 +1618,12 @@ class MainWindow(QMainWindow):
             return
 
         if checked:
+            # Deactivate any currently active valve control
+            self._deactivate_current_valve_control()
+
+            # Set this as the active control
+            self.active_valve_control = 'quick_vent'
+
             # Configure valves for quick venting
             valve_states = self.arduino_worker.get_valve_states()
             valve_states[2] = 0     # Close inlet (Valve 3)
@@ -1643,6 +1653,7 @@ class MainWindow(QMainWindow):
                 valve_button.setChecked(bool(valve_states[i]))
 
             self.logger.info("Quick vent stopped")
+            self.active_valve_control = None
 
     @pyqtSlot(bool)
     def on_slowVentButton_clicked(self, checked: bool):
@@ -1651,6 +1662,12 @@ class MainWindow(QMainWindow):
             return
 
         if checked:
+            # Deactivate any currently active valve control
+            self._deactivate_current_valve_control()
+
+            # Set this as the active control
+            self.active_valve_control = 'slow_vent'
+
             # Configure valves for slow venting
             valve_states = self.arduino_worker.get_valve_states()
             valve_states[2] = 0     # Close inlet (Valve 3)
@@ -1680,20 +1697,36 @@ class MainWindow(QMainWindow):
                 valve_button.setChecked(bool(valve_states[i]))
 
             self.logger.info("Slow vent stopped")
+            self.active_valve_control = None
 
     @pyqtSlot(bool)
     def on_buildPressureButton_clicked(self, checked: bool):
         """Handle build pressure button click."""
         if self.arduino_worker.running:
-            valve_states = self.arduino_worker.get_valve_states()
+            if checked:
+                # Deactivate any currently active valve control
+                self._deactivate_current_valve_control()
 
-            valve_states[2] = 1 if checked else 0  # Valve 3 (inlet)
-            valve_states[3] = 0 if checked else 0  # Valve 4 (outlet)
-            valve_states[4] = 0 if checked else 0  # Valve 5 (vent)
-            valve_states[5] = 0 if checked else 0  # Valve 6 (short)
-            self.arduino_worker.set_valves(valve_states)
-            self.logger.info(
-                f"Pressure build {'started' if checked else 'stopped'}")
+                # Set this as the active control
+                self.active_valve_control = 'build_pressure'
+
+                valve_states = self.arduino_worker.get_valve_states()
+                valve_states[2] = 1  # Valve 3 (inlet)
+                valve_states[3] = 0  # Valve 4 (outlet)
+                valve_states[4] = 0  # Valve 5 (vent)
+                valve_states[5] = 0  # Valve 6 (short)
+                self.arduino_worker.set_valves(valve_states)
+                self.logger.info("Pressure build started")
+            else:
+                valve_states = self.arduino_worker.get_valve_states()
+                valve_states[2] = 0  # Valve 3 (inlet)
+                valve_states[3] = 0  # Valve 4 (outlet)
+                valve_states[4] = 0  # Valve 5 (vent)
+                valve_states[5] = 0  # Valve 6 (short)
+                self.arduino_worker.set_valves(valve_states)
+                self.logger.info("Pressure build stopped")
+                self.active_valve_control = None
+
             # Update valve button states to reflect macro settings
             for i in range(6):
                 valve_button = getattr(self, f"Valve{i+1}Button")
@@ -1759,6 +1792,12 @@ class MainWindow(QMainWindow):
             return
 
         if checked:
+            # Deactivate any currently active valve control
+            self._deactivate_current_valve_control()
+
+            # Set this as the active control
+            self.active_valve_control = 'quick_bubble'
+
             duration = self.bubbleTimeDoubleSpinBox.value()
             # Store the original duration for reset
             self.original_bubble_duration = duration
@@ -1786,6 +1825,7 @@ class MainWindow(QMainWindow):
                 valve_button.setChecked(bool(valve_states[i]))
         else:
             self.stop_bubble()
+            self.active_valve_control = None
 
     def update_bubble_countdown(self):
         """Update the bubble countdown timer display."""
@@ -1826,6 +1866,10 @@ class MainWindow(QMainWindow):
                 self.bubbleTimeDoubleSpinBox.setValue(
                     self.original_bubble_duration)
                 delattr(self, 'original_bubble_duration')
+
+            # Clear active valve control if it was quick bubble
+            if self.active_valve_control == 'quick_bubble':
+                self.active_valve_control = None
 
             self.logger.info("Quick bubble complete")
 
@@ -2520,6 +2564,71 @@ class MainWindow(QMainWindow):
                 return str(suffix_path)
             counter += 1
 
+    def _deactivate_current_valve_control(self):
+        """Deactivate the currently active valve control and reverse its effects."""
+        if self.active_valve_control is None:
+            return
+
+        self.logger.info(
+            f"Deactivating current valve control: {self.active_valve_control}")
+
+        if self.active_valve_control == 'quick_bubble':
+            # Stop the bubble timer and close valves
+            self.stop_bubble()
+            self.quickBubbleButton.setChecked(False)
+
+        elif self.active_valve_control == 'build_pressure':
+            # Close inlet valve
+            valve_states = self.arduino_worker.get_valve_states()
+            valve_states[2] = 0  # Close inlet (Valve 3)
+            self.arduino_worker.set_valves(valve_states)
+            self.buildPressureButton.setChecked(False)
+
+        elif self.active_valve_control == 'quick_vent':
+            # Close valves 3-6
+            valve_states = self.arduino_worker.get_valve_states()
+            valve_states[2] = 0  # Close inlet (Valve 3)
+            valve_states[3] = 0  # Close outlet (Valve 4)
+            valve_states[4] = 0  # Close vent (Valve 5)
+            valve_states[5] = 0  # Close short (Valve 6)
+            self.arduino_worker.set_valves(valve_states)
+            self.quickVentButton.setChecked(False)
+
+        elif self.active_valve_control == 'slow_vent':
+            # Close valves 3-6
+            valve_states = self.arduino_worker.get_valve_states()
+            valve_states[2] = 0  # Close inlet (Valve 3)
+            valve_states[3] = 0  # Close outlet (Valve 4)
+            valve_states[4] = 0  # Close vent (Valve 5)
+            valve_states[5] = 0  # Close short (Valve 6)
+            self.arduino_worker.set_valves(valve_states)
+            self.slowVentButton.setChecked(False)
+
+        elif isinstance(self.active_valve_control, int) and 1 <= self.active_valve_control <= 4:
+            # Deactivate valve macro
+            macro_button = getattr(
+                self, f"valveMacro{self.active_valve_control}Button")
+            macro_button.setChecked(False)
+
+            # Cancel any pending timer
+            if self.active_macro_timer is not None:
+                self.active_macro_timer.stop()
+                self.active_macro_timer = None
+
+            # Reset valves to pre-macro state
+            self.reset_valves()
+            self.active_valve_macro = None
+            self.enable_all_valve_controls()
+
+        # Update valve button states
+        for i in range(6):
+            valve_button = getattr(self, f"Valve{i+1}Button")
+            valve_states = self.arduino_worker.get_valve_states()
+            valve_button.setChecked(bool(valve_states[i]))
+
+        # Clear active control
+        self.active_valve_control = None
+
     @pyqtSlot(bool)
     def on_beginSaveButton_clicked(self, checked=None):
         """Handle begin save button click."""
@@ -2676,7 +2785,14 @@ class MainWindow(QMainWindow):
                     self.reset_valves()
                     self.active_valve_macro = None
                     self.enable_all_valve_controls()
+                    self.active_valve_control = None
                     return
+
+                # Deactivate any currently active valve control
+                self._deactivate_current_valve_control()
+
+                # Set this as the active control
+                self.active_valve_control = macro_num
 
                 macro = self.load_valve_macro(macro_num)
                 if macro:
@@ -2735,8 +2851,6 @@ class MainWindow(QMainWindow):
 
                                 # Send valve states to Arduino
                                 self.arduino_worker.set_valves(final_states)
-
-                                # Update valve button states
                                 for i in range(6):
                                     valve_button = getattr(
                                         self, f"Valve{i+1}Button")
@@ -2746,6 +2860,7 @@ class MainWindow(QMainWindow):
                                 # Reset macro state
                                 self.active_valve_macro = None
                                 self.active_macro_timer = None
+                                self.active_valve_control = None
                                 macro_button.setChecked(False)
 
                                 # Re-enable controls
