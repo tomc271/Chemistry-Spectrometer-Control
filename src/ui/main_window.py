@@ -2968,7 +2968,7 @@ class MainWindow(QMainWindow):
 
                         # Update status to show waiting
                         self.update_sequence_status(
-                            f"Waiting for start time: {self.sequence_start_delay.strftime('%Y-%m-%d %H:%M:%S.%f')}")
+                            f"Waiting for start time: {self.sequence_start_delay.strftime('%H:%M:%S')}")
 
                         # Schedule the actual sequence start
                         QTimer.singleShot(
@@ -2986,7 +2986,7 @@ class MainWindow(QMainWindow):
                     self.logger.info(
                         f"Motor speed changed during sequence loading - adding {motor_speed_delay}ms delay")
                     self.update_sequence_status(
-                        f"Waiting for motor speed to update ({motor_speed_delay}ms)...")
+                        f"Speed Update")
 
                     # Store the delay time for logging purposes
                     self._motor_speed_delay_applied = motor_speed_delay
@@ -3282,7 +3282,7 @@ class MainWindow(QMainWindow):
             self.motor_calibrate_btn.setEnabled(False)
             self.disable_motor_controls(True)
 
-        self.statusBar().showMessage(message)
+        #self.statusBar().showMessage(message)
         self.log_widget.add_message(message)
 
     @pyqtSlot(str)
