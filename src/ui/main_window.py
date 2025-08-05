@@ -20,6 +20,7 @@ import time
 import json
 import os
 import re
+import csv
 
 from utils.config import Config
 from utils.timing_logger import setup_timing_logger, get_timing_logger  # Add import
@@ -168,6 +169,10 @@ class MainWindow(QMainWindow):
 
         self.config_manager = ConfigManager()
 
+        # Initialize timing mode if enabled
+        if self.timing_mode:
+            self._setup_timing_mode()
+
     def initialize_control_states(self):
         """Initialize the enabled/disabled states of all controls."""
         # Motor controls
@@ -177,6 +182,42 @@ class MainWindow(QMainWindow):
             # Always enabled for emergency
             self.motor_stop_btn.setEnabled(True)
         self.disable_motor_controls(True)  # Disable all other motor controls
+
+    def _setup_timing_mode(self):
+        """Setup timing mode for sequence event logging."""
+        if not self.timing_mode:
+            return
+
+        # Create the timing CSV file
+        self.timing_file_path = "C:/ssbubble/timestamps.csv"
+        try:
+            # Ensure the directory exists
+            os.makedirs(os.path.dirname(self.timing_file_path), exist_ok=True)
+
+            # Create the CSV file with headers
+            with open(self.timing_file_path, 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(['event', 'timestamp'])
+
+            self.logger.info(
+                f"Timing mode enabled. Timestamps will be logged to: {self.timing_file_path}")
+        except Exception as e:
+            self.logger.error(f"Failed to setup timing mode: {e}")
+
+    def _log_timing_event(self, event: str):
+        """Log a timing event to the CSV file."""
+        if not self.timing_mode:
+            return
+
+        try:
+            timestamp = datetime.now().isoformat()
+            with open(self.timing_file_path, 'a', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow([event, timestamp])
+
+            self.logger.debug(f"Timing event logged: {event} at {timestamp}")
+        except Exception as e:
+            self.logger.error(f"Failed to log timing event '{event}': {e}")
 
     def setup_ui(self):
         """Setup user interface."""
@@ -1449,6 +1490,10 @@ class MainWindow(QMainWindow):
                 f.write(f"{end_time}")
 
             self.logger.info(f"Sequence finish time: {end_time}")
+
+            # Log sequence finish time write successful timing event
+            self._log_timing_event("sequence_finish_time_write_successful")
+
             return True
 
         except Exception as e:
@@ -2958,6 +3003,8 @@ class MainWindow(QMainWindow):
         """Start sequence execution."""
         try:
             if self.steps:
+                # Log sequence start timing event
+                self._log_timing_event("sequence_start")
                 # Check if we need to delay the sequence start
                 if hasattr(self, 'sequence_start_delay') and self.sequence_start_delay:
                     current_time = datetime.now()
@@ -3052,6 +3099,9 @@ class MainWindow(QMainWindow):
         self.steps.pop(0)  # Remove completed step
 
         if not self.steps:  # Sequence complete
+            # Log sequence end timing event
+            self._log_timing_event("sequence_end")
+
             self.step_timer.stop()
 
             # Reset valves while preserving inlet/outlet
@@ -3096,6 +3146,9 @@ class MainWindow(QMainWindow):
         """Execute a single step in the sequence."""
         if not step:
             return
+
+        # Log step start timing event
+        self._log_timing_event(f"step_start_{step.step_type}")
 
         if self.arduino_worker and self.arduino_worker.running:
             # init valve states
@@ -3282,7 +3335,7 @@ class MainWindow(QMainWindow):
             self.motor_calibrate_btn.setEnabled(False)
             self.disable_motor_controls(True)
 
-        #self.statusBar().showMessage(message)
+        # self.statusBar().showMessage(message)
         self.log_widget.add_message(message)
 
     @pyqtSlot(str)
@@ -3615,6 +3668,9 @@ class MainWindow(QMainWindow):
                     self.savePathEdit.setText("")
                     self.prev_save_path = None
                     self.saving = False
+
+            # Log sequence decode successful timing event
+            self._log_timing_event("sequence_decode_successful")
 
             return True
         except FileNotFoundError:
