@@ -3044,15 +3044,6 @@ class MainWindow(QMainWindow):
             # Clear plot before starting new sequence
             # self.plot_widget.clear_plot()
 
-            # Only start recording if not already recording
-            if self.saving and not self.plot_widget.recording:
-                timestamp = time.strftime("%Y%m%d-%H%M%S")
-                filepath = os.path.join(
-                    self.default_save_path, f"sequence_{timestamp}.csv")
-                if not self.plot_widget.start_recording(filepath):
-                    self.handle_error("Failed to start data recording")
-                    return
-
             # Execute first step
             self.execute_step(self.steps[0])
 
@@ -3684,6 +3675,16 @@ class MainWindow(QMainWindow):
                 if success:
                     self.logger.info(
                         f"Motor speed set to {speed_text} during sequence loading")
+                    
+                    # Start recording if saving is enabled and not already recording
+                    if self.saving and not self.plot_widget.recording:
+                        timestamp = time.strftime("%Y%m%d-%H%M%S")
+                        filepath = os.path.join(
+                            self.default_save_path, f"sequence_{timestamp}.csv")
+                        if not self.plot_widget.start_recording(filepath):
+                            self.handle_error("Failed to start data recording")
+                            return
+                    
                     # Add a small delay to ensure the speed change is processed
                     import time
                     time.sleep(0.1)  # 100ms delay
