@@ -3072,18 +3072,11 @@ class MainWindow(QMainWindow):
         if not self.steps:
             return
             
-        # Calculate when the next step should start based on cumulative step times
-        # Add the current step's duration to the cumulative time
-        next_step_absolute_time = self.sequence_start_time + ((self.cumulative_step_time + self.steps[0].time_length) / 1000.0)  # Convert ms to seconds
+        # Schedule the next step using the current step's duration directly
+        # The step time is already in milliseconds
+        QTimer.singleShot(self.steps[0].time_length, self.next_step)
         
-        # Calculate delay until next step should start
-        current_time = time.time()
-        delay_ms = max(0, int((next_step_absolute_time - current_time) * 1000))
-        
-        # Schedule the next step
-        QTimer.singleShot(delay_ms, self.next_step)
-        
-        self.logger.debug(f"Scheduled next step in {delay_ms}ms (absolute time: {next_step_absolute_time:.3f}s, cumulative: {self.cumulative_step_time}ms)")
+        self.logger.debug(f"Scheduled next step in {self.steps[0].time_length}ms")
 
     def next_step(self):
         """Execute the next step in the sequence."""
@@ -3091,6 +3084,10 @@ class MainWindow(QMainWindow):
         expected_time = self.sequence_start_time + (self.cumulative_step_time / 1000.0)
         timing_error = (current_time - expected_time) * 1000  # Convert to ms
         self.logger.debug(f"Step executed at {current_time:.3f}s (expected: {expected_time:.3f}s, error: {timing_error:.1f}ms)")
+        
+        # Update cumulative step time after completing the current step
+        if self.steps:
+            self.cumulative_step_time += self.steps[0].time_length
         
         self.steps.pop(0)  # Remove completed step
 
@@ -3134,8 +3131,6 @@ class MainWindow(QMainWindow):
         else:
             # Execute next step in current sequence
             self.execute_step(self.steps[0])
-            # Update cumulative step time after completing the current step
-            self.cumulative_step_time += self.steps[0].time_length
             # Update step start time for UI display
             self.step_start_time = time.time()
             # Schedule next step based on absolute timing
