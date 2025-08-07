@@ -62,7 +62,7 @@ class MainWindow(QMainWindow):
         'b': 'Bubble',
         'd': 'Close All',
         'p': 'Pressurise',
-        'c': 'Cleanup',
+        'c': 'Moving',
         'q': 'Quick Vent',
         'g': 'Set Gas pH2',
         'h': 'Set Gas H2',
