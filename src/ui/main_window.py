@@ -1362,6 +1362,15 @@ class MainWindow(QMainWindow):
                                     "Motor not connected, sequence cancelled")
                                 return
 
+                            # Calculate sequence time first
+                            self.calculate_sequence_time()
+
+                            # Write sequence finish time before starting sequence
+                            if not self.write_sequence_finish_time(
+                                    self.total_sequence_time):
+                                self.logger.error(
+                                    "Failed to write sequence finish time")
+
                             # Set sequence start time
                             self.sequence_start_time = time.time()
 
@@ -1374,9 +1383,6 @@ class MainWindow(QMainWindow):
                             # Delete sequence file after processing
                             self.handle_sequence_file(True)
 
-                            # Calculate sequence time
-                            self.calculate_sequence_time()
-
                             # Update UI with first step
                             if self.steps:
                                 QMetaObject.invokeMethod(self, "update_sequence_info",
@@ -1388,11 +1394,6 @@ class MainWindow(QMainWindow):
                                                          Q_ARG(
                                                              int, len(self.steps)),
                                                          Q_ARG(float, self.total_sequence_time))
-
-                            if not self.write_sequence_finish_time(
-                                    self.total_sequence_time):
-                                self.logger.error(
-                                    "Failed to write sequence finish time")
 
                         else:
                             self.handle_sequence_file(False)
@@ -3022,30 +3023,10 @@ class MainWindow(QMainWindow):
                             f"Sequence delayed to start at {self.sequence_start_delay}")
                         return
 
-                # Check if motor speed was changed during sequence loading
-                motor_speed_delay = 0
-                if hasattr(self, '_motor_speed_changed_during_sequence') and self._motor_speed_changed_during_sequence:
-                    # Add a delay to allow Arduino to process the speed change
-                    # This delay can be adjusted based on Arduino response time
-                    motor_speed_delay = 50  # 500ms delay
-                    self.logger.info(
-                        f"Motor speed changed during sequence loading - adding {motor_speed_delay}ms delay")
-                    self.update_sequence_status(
-                        f"Speed Update")
-
-                    # Store the delay time for logging purposes
-                    self._motor_speed_delay_applied = motor_speed_delay
-
-                    # Clear the flag
+                # Motor speed changes are now handled during sequence loading
+                # Clear any remaining flags
+                if hasattr(self, '_motor_speed_changed_during_sequence'):
                     self._motor_speed_changed_during_sequence = False
-
-                """
-                if motor_speed_delay > 0:
-                    # Schedule the sequence start with the motor speed delay
-                    QTimer.singleShot(motor_speed_delay,
-                                      self._start_sequence_execution)
-                    return
-                """
 
                 # No delay needed, start immediately
                 self._start_sequence_execution()
@@ -3059,11 +3040,6 @@ class MainWindow(QMainWindow):
         # Log sequence start timing event
         self._log_timing_event("sequence_start")
         try:
-            # Log if motor speed delay was applied
-            if hasattr(self, '_motor_speed_delay_applied'):
-                self.logger.info(
-                    f"Sequence starting after {self._motor_speed_delay_applied}ms motor speed delay")
-                delattr(self, '_motor_speed_delay_applied')  # Clean up
 
             # Clear plot before starting new sequence
             # self.plot_widget.clear_plot()
@@ -3624,6 +3600,9 @@ class MainWindow(QMainWindow):
                     # Add a flag to indicate that motor speed was changed during sequence loading
                     # This will be used to add a delay before sequence execution
                     self._motor_speed_changed_during_sequence = True
+
+                    # Apply the motor speed change immediately and wait for it to complete
+                    self._apply_motor_speed_change(speed_text)
                 else:
                     self.logger.warning(
                         f"Invalid motor speed: {global_motor_speed}. Using current speed.")
@@ -3684,6 +3663,39 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.logger.error(f"Error loading sequence: {e}")
             return False
+
+    def _apply_motor_speed_change(self, speed_text: str):
+        """Apply motor speed change and wait for it to complete.
+
+        Args:
+            speed_text: The speed text to apply (Fast/Medium/Slow)
+        """
+        try:
+            # Map text to speed values
+            speed_map = {
+                'Fast': 6500,    # Maximum speed
+                'Medium': 4000,   # 60% speed
+                'Slow': 2000      # 30% speed
+            }
+
+            speed = speed_map.get(speed_text)
+            if speed is not None and self.motor_worker and self.motor_worker.running:
+                success = self.motor_worker.set_speed(speed)
+                if success:
+                    self.logger.info(
+                        f"Motor speed set to {speed_text} during sequence loading")
+                    # Add a small delay to ensure the speed change is processed
+                    import time
+                    time.sleep(0.1)  # 100ms delay
+                else:
+                    self.logger.error(
+                        f"Failed to set motor speed to {speed_text} during sequence loading")
+            else:
+                self.logger.warning(
+                    f"Motor worker not available or invalid speed: {speed_text}")
+
+        except Exception as e:
+            self.logger.error(f"Error applying motor speed change: {e}")
 
     def load_macro_labels(self):
         """Load and set macro button labels from JSON files."""
