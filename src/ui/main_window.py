@@ -1481,7 +1481,7 @@ class MainWindow(QMainWindow):
 
             # Calculate end time by adding sequence duration
             end_datetime = datetime.fromtimestamp(
-                start_time + (sequence_time / 1000))
+                start_time + (sequence_time / 1000) + 0.04) # add 40ms buffer as safety margin
 
             # Format end time as required
             end_time = f"[{end_datetime.year}, {end_datetime.month:02d}, {end_datetime.day:02d}, {end_datetime.hour:02d}, {end_datetime.minute:02d}, {end_datetime.second:02d}, {int(end_datetime.microsecond)}]"
