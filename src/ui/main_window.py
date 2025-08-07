@@ -3041,6 +3041,9 @@ class MainWindow(QMainWindow):
         self._log_timing_event("sequence_start")
         try:
 
+            # Schedule next step
+            QTimer.singleShot(self.steps[0].time_length, self.next_step)
+
             # Clear plot before starting new sequence
             # self.plot_widget.clear_plot()
 
@@ -3053,8 +3056,7 @@ class MainWindow(QMainWindow):
             self.step_timer.timeout.connect(self.update_step_time)
             self.step_timer.start(100)  # Update every 100ms
 
-            # Schedule next step
-            QTimer.singleShot(self.steps[0].time_length, self.next_step)
+            
 
             self.logger.info("Sequence execution started")
             self.update_sequence_status("Running")
