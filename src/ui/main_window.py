@@ -173,6 +173,9 @@ class MainWindow(QMainWindow):
         if self.timing_mode:
             self._setup_timing_mode()
         
+        # Initialize timing tracking system (works even when not in timing mode)
+        self._setup_timing_tracking()
+        
 
 
     def initialize_control_states(self):
@@ -216,15 +219,22 @@ class MainWindow(QMainWindow):
         if experiment_folder:
             # Use the experiment folder if provided
             self.timing_accuracy_file_path = os.path.join(experiment_folder, "timing_accuracy.csv")
+            self.logger.debug(f"Using experiment folder for timing: {experiment_folder}")
         else:
             # Fallback to default location
             self.timing_accuracy_file_path = "C:/ssbubble/timing_accuracy.csv"
+            self.logger.debug("Using default location for timing file")
+            
+        self.logger.debug(f"Timing file path: {self.timing_accuracy_file_path}")
             
         try:
             # Ensure the directory exists
-            os.makedirs(os.path.dirname(self.timing_accuracy_file_path), exist_ok=True)
+            directory = os.path.dirname(self.timing_accuracy_file_path)
+            self.logger.debug(f"Creating directory: {directory}")
+            os.makedirs(directory, exist_ok=True)
 
             # Create the CSV file with headers
+            self.logger.debug(f"Creating timing CSV file: {self.timing_accuracy_file_path}")
             with open(self.timing_accuracy_file_path, 'w', newline='') as csvfile:
                 writer = csv.writer(csvfile)
                 writer.writerow(['event', 'expected_time', 'actual_time', 'difference_ms'])
@@ -234,9 +244,68 @@ class MainWindow(QMainWindow):
             
             # Initialize timing tracking dictionary
             self.timing_events = {}
+            self.logger.debug("Timing events dictionary initialized")
             
         except Exception as e:
             self.logger.error(f"Failed to setup timing tracking: {e}")
+            import traceback
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
+
+    def _update_timing_file_path(self, experiment_folder: str):
+        """Update the timing file path to use the experiment folder.
+        
+        Args:
+            experiment_folder: Folder path where the timing CSV should be saved
+        """
+        if not experiment_folder:
+            self.logger.debug("No experiment folder provided, skipping timing file path update")
+            return
+            
+        self.logger.debug(f"Updating timing file path to experiment folder: {experiment_folder}")
+        
+        try:
+            # Update the timing file path
+            new_timing_path = os.path.join(experiment_folder, "timing_accuracy.csv")
+            self.logger.debug(f"New timing file path: {new_timing_path}")
+            
+            # If we already have timing events, move the existing file
+            if hasattr(self, 'timing_accuracy_file_path') and hasattr(self, 'timing_events'):
+                self.logger.debug(f"Current timing file path: {self.timing_accuracy_file_path}")
+                self.logger.debug(f"Timing events exist: {bool(self.timing_events)}")
+                
+                if os.path.exists(self.timing_accuracy_file_path) and self.timing_events:
+                    # Ensure the new directory exists
+                    os.makedirs(os.path.dirname(new_timing_path), exist_ok=True)
+                    
+                    # Move the existing file to the new location
+                    import shutil
+                    shutil.move(self.timing_accuracy_file_path, new_timing_path)
+                    self.logger.info(f"Moved timing file to: {new_timing_path}")
+                else:
+                    # Create new file in the experiment folder
+                    self.logger.debug(f"Creating new timing file at: {new_timing_path}")
+                    os.makedirs(os.path.dirname(new_timing_path), exist_ok=True)
+                    with open(new_timing_path, 'w', newline='') as csvfile:
+                        writer = csv.writer(csvfile)
+                        writer.writerow(['event', 'expected_time', 'actual_time', 'difference_ms'])
+                    self.logger.info(f"Created new timing file at: {new_timing_path}")
+            else:
+                self.logger.debug("No existing timing file or events, creating new file")
+                # Create new file in the experiment folder
+                os.makedirs(os.path.dirname(new_timing_path), exist_ok=True)
+                with open(new_timing_path, 'w', newline='') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow(['event', 'expected_time', 'actual_time', 'difference_ms'])
+                self.logger.info(f"Created new timing file at: {new_timing_path}")
+            
+            # Update the file path
+            self.timing_accuracy_file_path = new_timing_path
+            self.logger.debug(f"Updated timing file path to: {self.timing_accuracy_file_path}")
+            
+        except Exception as e:
+            self.logger.error(f"Failed to update timing file path: {e}")
+            import traceback
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
 
     def _record_expected_timing(self, event: str, expected_time: float):
         """Record the expected time when a file is written or event is scheduled.
@@ -3790,8 +3859,8 @@ class MainWindow(QMainWindow):
                         # Don't set saving=True until after start_recording succeeds
                         if self.on_beginSaveButton_clicked(True):
                             self.saving = True
-                            # Setup timing tracking in the experiment folder
-                            self._setup_timing_tracking(seq_save_path)
+                            # Update timing tracking to use the experiment folder
+                            self._update_timing_file_path(os.path.dirname(seq_save_path))
                     else:
                         # Store only the folder path, let the save button generate timestamped filename
                         self.savePathEdit.setText(seq_save_path)
@@ -3800,8 +3869,8 @@ class MainWindow(QMainWindow):
                         self.plot_widget.reset_csv_time_system()
                         if self.on_beginSaveButton_clicked(True):
                             self.saving = True
-                            # Setup timing tracking in the experiment folder
-                            self._setup_timing_tracking(seq_save_path)
+                            # Update timing tracking to use the experiment folder
+                            self._update_timing_file_path(seq_save_path)
                 elif seq_save_path == "None":   # No save path means stop saving
                     self.savePathEdit.setText("")
                     self.prev_save_path = None
@@ -3819,8 +3888,8 @@ class MainWindow(QMainWindow):
                     # Start new recording
                     if self.on_beginSaveButton_clicked(True):
                         self.saving = True
-                        # Setup timing tracking in the experiment folder
-                        self._setup_timing_tracking(os.path.dirname(seq_save_path))
+                        # Update timing tracking to use the experiment folder
+                        self._update_timing_file_path(os.path.dirname(seq_save_path))
                 elif seq_save_path == "None":
                     self.on_beginSaveButton_clicked(False)
                     self.savePathEdit.setText("")
