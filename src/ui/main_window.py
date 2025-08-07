@@ -274,6 +274,8 @@ class MainWindow(QMainWindow):
         if 'expected_time' in self.timing_events[event]:
             expected_time = self.timing_events[event]['expected_time']
             difference_ms = (actual_time - expected_time) * 1000  # Convert to milliseconds
+            if difference_ms > 50:
+                self.logger.warning(f"Timing error for {event}: event occurred {difference_ms:.2f}ms after expected time")
             
             try:
                 with open(self.timing_accuracy_file_path, 'a', newline='') as csvfile:
@@ -3818,7 +3820,7 @@ class MainWindow(QMainWindow):
                     if self.on_beginSaveButton_clicked(True):
                         self.saving = True
                         # Setup timing tracking in the experiment folder
-                        self._setup_timing_tracking(seq_save_path)
+                        self._setup_timing_tracking(os.path.dirname(seq_save_path))
                 elif seq_save_path == "None":
                     self.on_beginSaveButton_clicked(False)
                     self.savePathEdit.setText("")
