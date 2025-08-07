@@ -3003,8 +3003,6 @@ class MainWindow(QMainWindow):
         """Start sequence execution."""
         try:
             if self.steps:
-                # Log sequence start timing event
-                self._log_timing_event("sequence_start")
                 # Check if we need to delay the sequence start
                 if hasattr(self, 'sequence_start_delay') and self.sequence_start_delay:
                     current_time = datetime.now()
@@ -3029,7 +3027,7 @@ class MainWindow(QMainWindow):
                 if hasattr(self, '_motor_speed_changed_during_sequence') and self._motor_speed_changed_during_sequence:
                     # Add a delay to allow Arduino to process the speed change
                     # This delay can be adjusted based on Arduino response time
-                    motor_speed_delay = 500  # 500ms delay
+                    motor_speed_delay = 50  # 500ms delay
                     self.logger.info(
                         f"Motor speed changed during sequence loading - adding {motor_speed_delay}ms delay")
                     self.update_sequence_status(
@@ -3041,11 +3039,13 @@ class MainWindow(QMainWindow):
                     # Clear the flag
                     self._motor_speed_changed_during_sequence = False
 
+                """
                 if motor_speed_delay > 0:
                     # Schedule the sequence start with the motor speed delay
                     QTimer.singleShot(motor_speed_delay,
                                       self._start_sequence_execution)
                     return
+                """
 
                 # No delay needed, start immediately
                 self._start_sequence_execution()
@@ -3056,6 +3056,8 @@ class MainWindow(QMainWindow):
 
     def _start_sequence_execution(self):
         """Internal method to execute sequence after any delay."""
+        # Log sequence start timing event
+        self._log_timing_event("sequence_start")
         try:
             # Log if motor speed delay was applied
             if hasattr(self, '_motor_speed_delay_applied'):
@@ -3498,7 +3500,7 @@ class MainWindow(QMainWindow):
                         timestamp_list[3],  # hour
                         timestamp_list[4],  # minute
                         timestamp_list[5],  # second
-                        timestamp_list[6]   # microsecond
+                        timestamp_list[6] * 10000  # microsecond
                     )
                 except Exception as e:
                     self.logger.error(
