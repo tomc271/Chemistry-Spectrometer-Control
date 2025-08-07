@@ -172,6 +172,8 @@ class MainWindow(QMainWindow):
         # Initialize timing mode if enabled
         if self.timing_mode:
             self._setup_timing_mode()
+        
+
 
     def initialize_control_states(self):
         """Initialize the enabled/disabled states of all controls."""
@@ -203,6 +205,129 @@ class MainWindow(QMainWindow):
                 f"Timing mode enabled. Timestamps will be logged to: {self.timing_file_path}")
         except Exception as e:
             self.logger.error(f"Failed to setup timing mode: {e}")
+
+    def _setup_timing_tracking(self, experiment_folder: str = None):
+        """Setup timing tracking system that works even when not in timing mode.
+        
+        Args:
+            experiment_folder: Folder path where the timing CSV should be saved
+        """
+        # Create the timing accuracy CSV file
+        if experiment_folder:
+            # Use the experiment folder if provided
+            self.timing_accuracy_file_path = os.path.join(experiment_folder, "timing_accuracy.csv")
+        else:
+            # Fallback to default location
+            self.timing_accuracy_file_path = "C:/ssbubble/timing_accuracy.csv"
+            
+        try:
+            # Ensure the directory exists
+            os.makedirs(os.path.dirname(self.timing_accuracy_file_path), exist_ok=True)
+
+            # Create the CSV file with headers
+            with open(self.timing_accuracy_file_path, 'w', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(['event', 'expected_time', 'actual_time', 'difference_ms'])
+
+            self.logger.info(
+                f"Timing tracking enabled. Accuracy data will be logged to: {self.timing_accuracy_file_path}")
+            
+            # Initialize timing tracking dictionary
+            self.timing_events = {}
+            
+        except Exception as e:
+            self.logger.error(f"Failed to setup timing tracking: {e}")
+
+    def _record_expected_timing(self, event: str, expected_time: float):
+        """Record the expected time when a file is written or event is scheduled.
+        
+        Args:
+            event: Name of the event
+            expected_time: Expected time in seconds since epoch
+        """
+        if not hasattr(self, 'timing_events'):
+            return
+            
+        if event not in self.timing_events:
+            self.timing_events[event] = {}
+        
+        self.timing_events[event]['expected_time'] = expected_time
+        self.logger.debug(f"Recorded expected timing for {event}: {expected_time:.6f}s")
+
+    def _record_actual_timing(self, event: str):
+        """Record the actual time when an event occurs.
+        
+        Args:
+            event: Name of the event
+        """
+        if not hasattr(self, 'timing_events'):
+            return
+            
+        actual_time = time.time()
+        
+        if event not in self.timing_events:
+            self.timing_events[event] = {}
+        
+        self.timing_events[event]['actual_time'] = actual_time
+        
+        # If we have both expected and actual times, calculate difference and write to CSV
+        if 'expected_time' in self.timing_events[event]:
+            expected_time = self.timing_events[event]['expected_time']
+            difference_ms = (actual_time - expected_time) * 1000  # Convert to milliseconds
+            
+            try:
+                with open(self.timing_accuracy_file_path, 'a', newline='') as csvfile:
+                    writer = csv.writer(csvfile)
+                    writer.writerow([event, expected_time, actual_time, f"{difference_ms:.2f}"])
+                
+                self.logger.debug(f"Timing accuracy for {event}: expected={expected_time:.6f}s, actual={actual_time:.6f}s, diff={difference_ms:.2f}ms")
+                
+                # Clean up the event data after writing
+                del self.timing_events[event]
+                
+            except Exception as e:
+                self.logger.error(f"Failed to write timing accuracy data for {event}: {e}")
+        else:
+            self.logger.debug(f"Recorded actual timing for {event}: {actual_time:.6f}s (no expected time recorded)")
+
+    def _write_timing_accuracy_summary(self):
+        """Write a summary of all timing events to the CSV file."""
+        if not hasattr(self, 'timing_events') or not self.timing_events:
+            return
+            
+        try:
+            with open(self.timing_accuracy_file_path, 'a', newline='') as csvfile:
+                writer = csv.writer(csvfile)
+                
+                # Write any remaining events that have both expected and actual times
+                for event, data in list(self.timing_events.items()):
+                    if 'expected_time' in data and 'actual_time' in data:
+                        expected_time = data['expected_time']
+                        actual_time = data['actual_time']
+                        difference_ms = (actual_time - expected_time) * 1000
+                        
+                        writer.writerow([event, expected_time, actual_time, f"{difference_ms:.2f}"])
+                        self.logger.debug(f"Final timing accuracy for {event}: diff={difference_ms:.2f}ms")
+                
+                # Write events that only have expected times (actual time never recorded)
+                for event, data in list(self.timing_events.items()):
+                    if 'expected_time' in data and 'actual_time' not in data:
+                        expected_time = data['expected_time']
+                        writer.writerow([event, expected_time, "NOT_RECORDED", "N/A"])
+                        self.logger.warning(f"Event {event} expected at {expected_time:.6f}s but actual time was never recorded")
+                
+                # Write events that only have actual times (expected time never recorded)
+                for event, data in list(self.timing_events.items()):
+                    if 'actual_time' in data and 'expected_time' not in data:
+                        actual_time = data['actual_time']
+                        writer.writerow([event, "NOT_RECORDED", actual_time, "N/A"])
+                        self.logger.warning(f"Event {event} occurred at {actual_time:.6f}s but expected time was never recorded")
+            
+            # Clear the timing events after writing summary
+            self.timing_events.clear()
+            
+        except Exception as e:
+            self.logger.error(f"Failed to write timing accuracy summary: {e}")
 
     def _log_timing_event(self, event: str):
         """Log a timing event to the CSV file."""
@@ -1347,6 +1472,8 @@ class MainWindow(QMainWindow):
             # Check for sequence file
             sequence_path = Path(r"C:\ssbubble\sequence.txt")
             if sequence_path.exists():
+
+                
                 # Process in chunks to avoid blocking
                 def process_sequence():
                     try:
@@ -1485,6 +1612,10 @@ class MainWindow(QMainWindow):
 
             # Format end time as required
             end_time = f"[{end_datetime.year}, {end_datetime.month:02d}, {end_datetime.day:02d}, {end_datetime.hour:02d}, {end_datetime.minute:02d}, {end_datetime.second:02d}, {int(end_datetime.microsecond)}]"
+
+            # Record expected timing for sequence finish
+            expected_finish_time = start_time + (sequence_time / 1000) + 0.04
+            self._record_expected_timing("sequence_finish", expected_finish_time)
 
             # Write to file
             with open(r"C:\ssbubble\sequence_finish_time.txt", "w") as f:
@@ -3039,17 +3170,26 @@ class MainWindow(QMainWindow):
         """Internal method to execute sequence after any delay."""
         # Log sequence start timing event
         self._log_timing_event("sequence_start")
+        
+        # Record expected timing for sequence start
+        self._record_expected_timing("sequence_start", time.time())
+        
         try:
             # Record the absolute start time of the sequence
             self.sequence_start_time = time.time()
             self.current_step_index = 0
             self.cumulative_step_time = 0
 
+            # Record actual timing for sequence start
+            self._record_actual_timing("sequence_start")
+
             # Clear plot before starting new sequence
             # self.plot_widget.clear_plot()
 
             # Execute first step
             self.execute_step(self.steps[0])
+
+
 
             # Start step timer
             self.step_start_time = time.time()
@@ -3071,6 +3211,8 @@ class MainWindow(QMainWindow):
         """Schedule the next step based on absolute timing from sequence start."""
         if not self.steps:
             return
+            
+        
             
         # Schedule the next step using the current step's duration directly
         # The step time is already in milliseconds
@@ -3094,6 +3236,9 @@ class MainWindow(QMainWindow):
         if not self.steps:  # Sequence complete
             # Log sequence end timing event
             self._log_timing_event("sequence_end")
+            
+            # Record actual timing for sequence finish
+            self._record_actual_timing("sequence_finish")
 
             self.step_timer.stop()
 
@@ -3123,6 +3268,9 @@ class MainWindow(QMainWindow):
                 self.logger.info(
                     "Started 15-minute timer to stop saving if no new sequence is received")
 
+            # Write timing accuracy summary before restarting monitoring
+            self._write_timing_accuracy_summary()
+            
             # Restart sequence monitoring
             if self.arduino_worker and self.arduino_worker.running and self.arduino_worker.mode == 1:
                 self.logger.info("Restarting sequence monitoring")
@@ -3131,6 +3279,9 @@ class MainWindow(QMainWindow):
         else:
             # Execute next step in current sequence
             self.execute_step(self.steps[0])
+            
+
+            
             # Update step start time for UI display
             self.step_start_time = time.time()
             # Schedule next step based on absolute timing
@@ -3140,6 +3291,8 @@ class MainWindow(QMainWindow):
         """Execute a single step in the sequence."""
         if not step:
             return
+
+
 
         # Log step start timing event
         self._log_timing_event(f"step_start_{step.step_type}")
@@ -3635,6 +3788,8 @@ class MainWindow(QMainWindow):
                         # Don't set saving=True until after start_recording succeeds
                         if self.on_beginSaveButton_clicked(True):
                             self.saving = True
+                            # Setup timing tracking in the experiment folder
+                            self._setup_timing_tracking(seq_save_path)
                     else:
                         # Store only the folder path, let the save button generate timestamped filename
                         self.savePathEdit.setText(seq_save_path)
@@ -3643,6 +3798,8 @@ class MainWindow(QMainWindow):
                         self.plot_widget.reset_csv_time_system()
                         if self.on_beginSaveButton_clicked(True):
                             self.saving = True
+                            # Setup timing tracking in the experiment folder
+                            self._setup_timing_tracking(seq_save_path)
                 elif seq_save_path == "None":   # No save path means stop saving
                     self.savePathEdit.setText("")
                     self.prev_save_path = None
@@ -3660,6 +3817,8 @@ class MainWindow(QMainWindow):
                     # Start new recording
                     if self.on_beginSaveButton_clicked(True):
                         self.saving = True
+                        # Setup timing tracking in the experiment folder
+                        self._setup_timing_tracking(seq_save_path)
                 elif seq_save_path == "None":
                     self.on_beginSaveButton_clicked(False)
                     self.savePathEdit.setText("")
@@ -3668,6 +3827,8 @@ class MainWindow(QMainWindow):
 
             # Log sequence decode successful timing event
             self._log_timing_event("sequence_decode_successful")
+            
+
 
             return True
         except FileNotFoundError:
