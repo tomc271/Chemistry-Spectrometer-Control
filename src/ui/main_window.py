@@ -3040,9 +3040,10 @@ class MainWindow(QMainWindow):
         # Log sequence start timing event
         self._log_timing_event("sequence_start")
         try:
-
-            # Schedule next step
-            QTimer.singleShot(self.steps[0].time_length, self.next_step)
+            # Record the absolute start time of the sequence
+            self.sequence_start_time = time.time()
+            self.current_step_index = 0
+            self.cumulative_step_time = 0
 
             # Clear plot before starting new sequence
             # self.plot_widget.clear_plot()
@@ -3056,7 +3057,8 @@ class MainWindow(QMainWindow):
             self.step_timer.timeout.connect(self.update_step_time)
             self.step_timer.start(100)  # Update every 100ms
 
-            
+            # Schedule next step based on absolute timing
+            self._schedule_next_step()
 
             self.logger.info("Sequence execution started")
             self.update_sequence_status("Running")
@@ -3065,8 +3067,31 @@ class MainWindow(QMainWindow):
             self.logger.error(f"Error executing sequence: {e}")
             self.handle_error("Failed to execute sequence")
 
+    def _schedule_next_step(self):
+        """Schedule the next step based on absolute timing from sequence start."""
+        if not self.steps:
+            return
+            
+        # Calculate when the next step should start based on cumulative step times
+        # Add the current step's duration to the cumulative time
+        next_step_absolute_time = self.sequence_start_time + ((self.cumulative_step_time + self.steps[0].time_length) / 1000.0)  # Convert ms to seconds
+        
+        # Calculate delay until next step should start
+        current_time = time.time()
+        delay_ms = max(0, int((next_step_absolute_time - current_time) * 1000))
+        
+        # Schedule the next step
+        QTimer.singleShot(delay_ms, self.next_step)
+        
+        self.logger.debug(f"Scheduled next step in {delay_ms}ms (absolute time: {next_step_absolute_time:.3f}s, cumulative: {self.cumulative_step_time}ms)")
+
     def next_step(self):
         """Execute the next step in the sequence."""
+        current_time = time.time()
+        expected_time = self.sequence_start_time + (self.cumulative_step_time / 1000.0)
+        timing_error = (current_time - expected_time) * 1000  # Convert to ms
+        self.logger.debug(f"Step executed at {current_time:.3f}s (expected: {expected_time:.3f}s, error: {timing_error:.1f}ms)")
+        
         self.steps.pop(0)  # Remove completed step
 
         if not self.steps:  # Sequence complete
@@ -3109,9 +3134,12 @@ class MainWindow(QMainWindow):
         else:
             # Execute next step in current sequence
             self.execute_step(self.steps[0])
-            # Reset step timer and schedule next step
+            # Update cumulative step time after completing the current step
+            self.cumulative_step_time += self.steps[0].time_length
+            # Update step start time for UI display
             self.step_start_time = time.time()
-            QTimer.singleShot(self.steps[0].time_length, self.next_step)
+            # Schedule next step based on absolute timing
+            self._schedule_next_step()
 
     def execute_step(self, step):
         """Execute a single step in the sequence."""
@@ -3773,11 +3801,14 @@ class MainWindow(QMainWindow):
     def update_step_time(self):
         """Update the time remaining display for current step and total sequence."""
         try:
-            if self.steps and len(self.steps) > 0:
-                # Calculate current step time remaining
-                elapsed = int((time.time() - self.step_start_time)
-                              * 1000)  # Convert to ms
-                step_remaining = max(0, self.steps[0].time_length - elapsed)
+            if self.steps and len(self.steps) > 0 and hasattr(self, 'sequence_start_time'):
+                # Calculate current step time remaining based on absolute timing
+                current_time = time.time()
+                elapsed_since_sequence_start = (current_time - self.sequence_start_time) * 1000  # Convert to ms
+                
+                # Calculate how much time has elapsed in the current step
+                step_elapsed = elapsed_since_sequence_start - self.cumulative_step_time
+                step_remaining = max(0, self.steps[0].time_length - step_elapsed)
 
                 # Calculate total time remaining
                 total_remaining = step_remaining  # Start with current step remaining
