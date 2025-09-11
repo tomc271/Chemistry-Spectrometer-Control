@@ -1595,6 +1595,9 @@ class MainWindow(QMainWindow):
                                 self.logger.error(
                                     "Failed to write sequence finish time")
 
+                            # Delete sequence file after processing
+                            self.handle_sequence_file(True)
+
                             # Wait for start.txt file before beginning sequence
                             self.wait_for_start_file()
 
@@ -1737,6 +1740,7 @@ class MainWindow(QMainWindow):
         self.step_running_time = 0
         self.total_sequence_time = sum(step.time_length for step in self.steps)
         self.current_step_time = self.steps[0].time_length if self.steps else 0
+        self.total_sequence_time = self.total_sequence_time + 100 # add 100ms buffer to account for new start.txt check
         self.logger.info(f"Sequence length is {self.total_sequence_time} ms")
 
     def write_to_prospa(self, success: bool):
@@ -1843,8 +1847,6 @@ class MainWindow(QMainWindow):
             # Stop sequence file timer
             self.file_timer.stop()
 
-            # Delete sequence file after processing
-            self.handle_sequence_file(True)
 
         except Exception as e:
             self.logger.error(f"Error starting sequence: {e}")
